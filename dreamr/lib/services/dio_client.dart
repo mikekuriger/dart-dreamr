@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:dreamr/constants.dart';
 
 class DioClient {
   static late final Dio dio;
@@ -13,7 +14,7 @@ class DioClient {
     );
 
     dio = Dio(BaseOptions(
-      baseUrl: 'https://dreamr.zentha.me',
+      baseUrl: '${AppConfig.baseUrl}',
       headers: {
         'Content-Type': 'application/json',
       },

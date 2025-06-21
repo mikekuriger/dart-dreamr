@@ -28,7 +28,7 @@ class _NewDreamScreenState extends State<NewDreamScreen> {
     try {
       final analysis = await ApiService.submitDream(dreamText);
       setState(() {
-        _aiResponse = analysis;
+        _aiResponse = analysis as String?;
       });
     } catch (e) {
       setState(() {
