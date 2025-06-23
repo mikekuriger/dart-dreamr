@@ -3,11 +3,12 @@ import 'package:dreamr/models/dream.dart';
 import 'package:dreamr/services/api_service.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
-import 'package:dreamr/theme/colors.dart';
 
 
 class DreamJournalWidget extends StatefulWidget {
-  const DreamJournalWidget({Key? key}) : super(key: key);
+  // const DreamJournalWidget({super.key});
+  final VoidCallback? onDreamsLoaded;
+  const DreamJournalWidget({super.key, this.onDreamsLoaded});
 
   @override
   State<DreamJournalWidget> createState() => DreamJournalWidgetState();
@@ -15,6 +16,8 @@ class DreamJournalWidget extends StatefulWidget {
 
 class DreamJournalWidgetState extends State<DreamJournalWidget> {
   List<Dream> _dreams = [];
+  List<Dream> getDreams() => _dreams;
+
   Map<int, bool> _expanded = {};
   bool _loading = true;
 
@@ -24,6 +27,30 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
     _loadDreams();
   }
 
+  Color _getToneColor(String tone) {
+    switch (tone.toLowerCase().trim()) {
+      case 'peaceful / gentle':
+        return Colors.blue.shade100;
+      case 'epic / heroic':
+        return Colors.orange.shade100;
+      case 'whimsical / surreal':
+        return Colors.purple.shade100;
+      case 'nightmarish / dark':
+        return Colors.red.shade100;
+      case 'romantic / nostalgic':
+        return Colors.pink.shade100;
+      case 'ancient / mythic':
+        return Colors.brown.shade100;
+      case 'futuristic / uncanny':
+        return Colors.teal.shade100;
+      case 'elegant / ornate':
+        return Colors.indigo.shade100;
+      default:
+        return Colors.grey.shade100;
+    }
+  }
+
+
   Future<void> _loadDreams() async {
     try {
       final dreams = await ApiService.fetchDreams();
@@ -31,6 +58,7 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
         _dreams = dreams;
         _loading = false;
       });
+      widget.onDreamsLoaded?.call();
     } catch (e) {
       print("❌ Failed to fetch dreams: $e");
       setState(() {
@@ -38,7 +66,6 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
       });
     }
   }
-
 
   void refresh() {
     setState(() => _loading = true);
@@ -63,7 +90,7 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
         // itemBuilder: (context, index) {
         //   final dream = _dreams[index];
         //   final isExpanded = _expanded[dream.id] ?? false;
-        //   final formattedDate = DateFormat.yMMMd().add_jm().format(dream.createdAt);
+        //   final formattedDate = DateFormat.yMMMd().add_jm().format(dream.createdAt.toLocal());
 
         //   return Column(
         //     crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,23 +159,21 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
         itemBuilder: (context, index) {
           final dream = _dreams[index];
           final isExpanded = _expanded[dream.id] ?? false;
-          final formattedDate = DateFormat.yMMMd().add_jm().format(dream.createdAt);
+          // final formattedDate = DateFormat.yMMMd().add_jm().format(dream.createdAt.toLocal());
+          final formattedDate = DateFormat('EEE, MMM d, y h:mm a').format(dream.createdAt.toLocal());
 
-          return SizedBox(
-            width: MediaQuery.of(context).size.width,
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3), // space between cards
             child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 4),
-              padding: const EdgeInsets.all(8),
+              width: double.infinity, // full width
+              padding: const EdgeInsets.all(8), // inner padding inside the white box
               decoration: BoxDecoration(
-                color: Colors.white,                        //color of box for dreams
+
+                // color: Colors.white,
+                color: _getToneColor(dream.tone),
+
                 borderRadius: BorderRadius.circular(4),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 2,
-                    offset: Offset(0, 1),
-                  ),
-                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,7 +197,7 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
                               fit: BoxFit.cover,
                             ),
                           ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,6 +210,15 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
                                 dream.summary,
                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                               ),
+                              Text(
+                                dream.tone,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontStyle: FontStyle.italic,
+                                  color: Colors.black87,
+                                ),
+                              ),
+
                             ],
                           ),
                         ),

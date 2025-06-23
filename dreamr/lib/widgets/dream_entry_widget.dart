@@ -5,9 +5,10 @@ import 'dart:developer' as developer;
 
 
 class DreamEntryWidget extends StatefulWidget {
-  final VoidCallback onSubmitComplete;
+  final VoidCallback? onSubmitComplete;
 
-  const DreamEntryWidget({Key? key, required this.onSubmitComplete}) : super(key: key);
+  //const DreamEntryWidget({Key? key, required this.onSubmitComplete}) : super(key: key);
+  const DreamEntryWidget({Key? key, this.onSubmitComplete}) : super(key: key);
 
   @override
   State<DreamEntryWidget> createState() => _DreamEntryWidgetState();
@@ -47,7 +48,7 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
       });
 
       _controller.clear();
-      widget.onSubmitComplete();
+      widget.onSubmitComplete?.call();
 
       // ⏳ Now generate image in background
       await _generateDreamImage(dreamId);
@@ -108,7 +109,7 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Hello, ${_userName ?? "Sleepyhead"}",
+          "Hello, ${_userName ?? ""}",
           style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -150,47 +151,85 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
           children: [
             // Analyze Button
             SizedBox(
-              width: 130,
-              child: Builder(
-                builder: (context) {
-                  return ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.purple600,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+              width: 150,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.purple600,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.red, // 🔴 <- use red when disabled
+                  disabledForegroundColor: Colors.white, // 🔒 <- keep text white
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: (_loading || _imageGenerating) ? null : _submitDream,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_loading || _imageGenerating)
+                      const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                    onPressed: (_loading || _imageGenerating) ? null : _submitDream,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (_loading || _imageGenerating)
-                          const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          ),
-                        if (_loading || _imageGenerating) const SizedBox(width: 8),
-                        Text(
-                          _imageGenerating
-                              ? "Generating..."
-                              : _loading
-                                  ? "Analyzing..."
-                                  : "Analyze",
-                        )
-                      ],
-                    ),
-                  );
-                },
+                    if (_loading || _imageGenerating) const SizedBox(width: 8),
+                    Text(
+                      _imageGenerating
+                          ? "Generating..."
+                          : _loading
+                              ? "Analyzing..."
+                              : "Analyze",
+                    )
+                  ],
+                ),
               ),
             ),
-            const SizedBox(width: 12),
+            //   child: Builder(
+            //     builder: (context) {
+            //       return ElevatedButton(
+            //         style: ElevatedButton.styleFrom(
+            //           backgroundColor: AppColors.purple600,
+            //           foregroundColor: Colors.white,
+            //           padding: const EdgeInsets.symmetric(vertical: 12),
+            //           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            //           shape: RoundedRectangleBorder(
+            //             borderRadius: BorderRadius.circular(8),
+            //           ),
+            //         ),
+            //         onPressed: (_loading || _imageGenerating) ? null : _submitDream,
+            //         child: Row(
+            //           mainAxisAlignment: MainAxisAlignment.center,
+            //           children: [
+            //             if (_loading || _imageGenerating)
+            //               const SizedBox(
+            //                 width: 18,
+            //                 height: 18,
+            //                 child: CircularProgressIndicator(
+            //                   strokeWidth: 2,
+            //                   color: Colors.white,
+            //                 ),
+            //               ),
+            //             if (_loading || _imageGenerating) const SizedBox(width: 8),
+            //             Text(
+            //               _imageGenerating
+            //                   ? "Generating..."
+            //                   : _loading
+            //                       ? "Analyzing..."
+            //                       : "Analyze",
+            //             )
+            //           ],
+            //         ),
+            //       );
+            //     },
+            //   ),
+            // ),
+
+            const SizedBox(width: 8), // gap between buttons
 
             // Save Button
             SizedBox(

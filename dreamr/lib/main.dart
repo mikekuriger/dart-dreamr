@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:dreamr/screens/login_screen.dart';
 import 'package:dreamr/screens/register_screen.dart';
 import 'package:dreamr/screens/dashboard_screen.dart';
+import 'package:dreamr/screens/dream_journal_screen.dart';
+import 'package:dreamr/screens/dream_gallery_screen.dart';
 import 'services/dio_client.dart';
 import 'package:dreamr/theme/colors.dart';
 
@@ -29,6 +31,10 @@ class DreamrApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/dashboard': (context) => const DashboardScreen(),
+        '/journal': (context) => const DreamJournalScreen(),
+        '/gallery': (context) => const DreamGalleryScreen(),
+        '/image': (context) => const Placeholder(), // temporary
+
       },
     );
   }
