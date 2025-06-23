@@ -1,9 +1,49 @@
 import 'dart:convert';
 import 'package:dreamr/models/dream.dart';
 import 'dio_client.dart';
+import 'package:dio/dio.dart';
 import 'package:dreamr/constants.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:flutter/foundation.dart';
+
 
 class ApiService {
+  // Register using email + password
+  static Future<String> register(String firstName, String email, String password) async {
+      String timezone = await FlutterTimezone.getLocalTimezone();
+
+      final response = await DioClient.dio.post(
+        '/api/register',
+        data: {
+          'email': email,
+          'password': password,
+          'first_name': firstName,
+          'timezone': timezone,
+        },
+        options: Options(
+          headers: {'Content-Type': 'application/json'},
+          validateStatus: (_) => true, // <---- this is KEY
+        ),
+      );
+
+      debugPrint("📦 Response status: ${response.statusCode}");
+      debugPrint("📦 Response data: ${response.data.runtimeType} - ${response.data}");
+
+      if (response.statusCode == 200) {
+        return "✅ Check your email to confirm your Dreamr✨ account.";
+      } else {
+        if (response.data is Map && response.data['error'] != null) {
+          return "❌ ${response.data['error']}";
+        } else if (response.data is String) {
+          return "❌ ${response.data}";
+        } else {
+          return "❌ Registration failed.";
+        }
+      }
+  }
+
+
+
   // Login using email + password
   static Future<void> login(String email, String password) async {
     final response = await DioClient.dio.post('/api/login',
@@ -15,6 +55,20 @@ class ApiService {
 
     if (response.statusCode != 200) {
       throw Exception('Login failed: ${response.statusMessage}');
+    }
+  }
+
+  // Google auth
+  static Future<void> googleLogin(String idToken) async {
+    debugPrint("🔥 Attempting Google login with token: $idToken");
+
+    final response = await DioClient.dio.post(
+      '/api/google_login',
+      data: {'id_token': idToken},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception("Google login failed");
     }
   }
 

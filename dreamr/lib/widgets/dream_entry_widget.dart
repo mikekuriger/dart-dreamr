@@ -4,8 +4,6 @@ import 'package:dreamr/theme/colors.dart';
 import 'dart:developer' as developer;
 
 
-
-
 class DreamEntryWidget extends StatefulWidget {
   final VoidCallback onSubmitComplete;
 
@@ -118,11 +116,11 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
           ),
         ),
         const SizedBox(height: 8),
-        Container(
+        SizedBox(
           width: double.infinity,
           child: Text(
-            "Tell me about your dream in as much detail as you remember — characters, settings, emotions, anything that stood out."
-            "After submitting, I will take a moment to analyze your dream and generate a personalized interpretation."
+            "Tell me about your dream in as much detail as you remember — characters, settings, emotions, anything that stood out. "
+            "After submitting, I will take a moment to analyze your dream and generate a personalized interpretation. "
             "Your dream interpretation takes a few moments, but your dream image will take me a minute or so to create.\n"
             "So sit tight while the magic happens ✨",
             style: TextStyle(
@@ -131,7 +129,8 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
             ),
           ),
         ),
-
+  
+  // Dream entry field
         const SizedBox(height: 16),
         TextField(
           controller: _controller,
@@ -143,46 +142,76 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
             border: OutlineInputBorder(),
           ),
         ),
+
+  // Analyze button
         const SizedBox(height: 10),
-        Builder(
-          builder: (context) {
-            developer.log("Rendering button: _loading=$_loading, _imageGenerating=$_imageGenerating", name: 'ButtonRender');
-            return ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.purple600,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onPressed: (_loading || _imageGenerating) ? null : _submitDream,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_loading || _imageGenerating)
-                    const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Analyze Button
+            SizedBox(
+              width: 130,
+              child: Builder(
+                builder: (context) {
+                  return ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.purple600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                  if (_loading || _imageGenerating) const SizedBox(width: 8),
-                  Text(
-                    _imageGenerating
-                        ? "Generating Dream Image..."
-                        : _loading
-                            ? "Analyzing Dream..."
-                            : "Submit Dream",
-                  )
-                ],
+                    onPressed: (_loading || _imageGenerating) ? null : _submitDream,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (_loading || _imageGenerating)
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          ),
+                        if (_loading || _imageGenerating) const SizedBox(width: 8),
+                        Text(
+                          _imageGenerating
+                              ? "Generating..."
+                              : _loading
+                                  ? "Analyzing..."
+                                  : "Analyze",
+                        )
+                      ],
+                    ),
+                  );
+                },
               ),
-            );
-          },
+            ),
+            const SizedBox(width: 12),
+
+            // Save Button
+            SizedBox(
+              width: 120,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.purple600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: (_loading || _imageGenerating) ? null : _submitDream,
+                child: const Text("Save"),
+              ),
+            ),
+          ],
         ),
+
 
         // ElevatedButton(
         //   style: ElevatedButton.styleFrom(
