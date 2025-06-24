@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:dreamr/widgets/dream_journal_widget.dart';
 import 'package:dreamr/widgets/main_scaffold.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:dreamr/models/dream.dart';
 
 
 class DreamJournalScreen extends StatefulWidget {
@@ -18,6 +17,17 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
   // DateTime? _selectedDay;
   // List<Dream> _allDreams = [];
   // Set<DateTime> _dreamDates = {};
+
+  final ScrollController _scrollController = ScrollController();
+  void _scrollToTop() {
+    print('📢 Scroll attempt: offset = ${_scrollController.offset}');
+    _scrollController.animateTo(
+      0.0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -47,7 +57,6 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
       int maxWords = 0;
 
       for (var d in dreams) {
-        print('tone: "${d.tone}"');
         final tone = d.tone.trim().toLowerCase();
         if (tone.isNotEmpty) {
           toneMap[tone] = (toneMap[tone] ?? 0) + 1;
@@ -71,16 +80,39 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
   @override
   Widget build(BuildContext context) {
     return MainScaffold(
-      title: const Text("Dream Journal ✍️", style: TextStyle(color: Colors.white)),
+      onHomePressed: _scrollToTop,
+      // title: const Text("Dream Journal ✍️", style: TextStyle(color: Colors.white)),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Text(
+            "Dreamr ✨ Journal ✍️",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(height: 2),
+          Text(
+            "Your personal AI-powered dream analysis",
+            style: TextStyle(
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+              color: Color(0xFFD1B2FF),
+            ),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           _refreshJournal();
           _loadStats();
         },
         child: SingleChildScrollView(
+          controller: _scrollController,
           padding: const EdgeInsets.all(4),  // padding for dream boxes
           physics: const AlwaysScrollableScrollPhysics(),
-          // child: DreamJournalWidget(key: _journalKey),
           child: Column(
             children: [
               // TableCalendar(
@@ -108,7 +140,7 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
               //   ),
               // ),
 
-              // stats
+              // STATS + BUTTON
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
                 child: Container(
@@ -129,10 +161,54 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                       Text("Dreams Logged: $_dreamCount", style: const TextStyle(color: Colors.white)),
                       Text("Most Common Tone: $_mostCommonTone", style: const TextStyle(color: Colors.white)),
                       Text("Longest Dream: $_longestWordCount words", style: const TextStyle(color: Colors.white)),
+
+                      const SizedBox(height: 10),
+
+                      // 👇 New Dream button inside the box
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.edit_note),
+                          label: const Text("Add a New Dream"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.deepPurple.shade600,
+                          ),
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/dashboard');
+                          },
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
+
+              // stats
+              // Padding(
+              //   padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
+              //   child: Container(
+              //     width: double.infinity,
+              //     padding: const EdgeInsets.all(12),
+              //     decoration: BoxDecoration(
+              //       color: Colors.deepPurple.shade600,
+              //       borderRadius: BorderRadius.circular(8),
+              //     ),
+              //     child: Column(
+              //       crossAxisAlignment: CrossAxisAlignment.start,
+              //       children: [
+              //         const Text(
+              //           "🧠 Dream Stats",
+              //           style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+              //         ),
+              //         const SizedBox(height: 6),
+              //         Text("Dreams Logged: $_dreamCount", style: const TextStyle(color: Colors.white)),
+              //         Text("Most Common Tone: $_mostCommonTone", style: const TextStyle(color: Colors.white)),
+              //         Text("Longest Dream: $_longestWordCount words", style: const TextStyle(color: Colors.white)),
+              //       ],
+              //     ),
+              //   ),
+              // ),
 
               // const SizedBox(height: 0),  // extra space 
               DreamJournalWidget(

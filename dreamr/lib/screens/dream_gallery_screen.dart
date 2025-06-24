@@ -33,7 +33,29 @@ class _DreamGalleryScreenState extends State<DreamGalleryScreen> {
   @override
   Widget build(BuildContext context) {
     return MainScaffold(
-      title: const Text("Dream Gallery 🖼️", style: TextStyle(color: Colors.white)),
+      // title: const Text("Dreamr ✨ Gallery", style: TextStyle(color: Colors.white)),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Text(
+            "Dreamr ✨ Gallery",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(height: 2),
+          Text(
+            "Your personal AI-powered dream analysis",
+            style: TextStyle(
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+              color: Color(0xFFD1B2FF),
+            ),
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Padding(

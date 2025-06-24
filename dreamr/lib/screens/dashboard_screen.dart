@@ -17,7 +17,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
           Text(
-            "Welcome to Dreamr ✨",
+            "Dreamr ✨",
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,

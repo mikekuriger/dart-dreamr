@@ -5,13 +5,15 @@ class MainScaffold extends StatelessWidget {
   final Widget title;
   final Widget body;
   final Widget? floatingActionButton;
+  final VoidCallback? onHomePressed;
 
   const MainScaffold({
-    Key? key,
+    super.key,
     required this.title,
     required this.body,
+    this.onHomePressed,
     this.floatingActionButton,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -24,8 +26,16 @@ class MainScaffold extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.home, color: Colors.white),
+            // onPressed: () {
+            //   Navigator.pushNamed(context, '/dashboard');
+            // },
             onPressed: () {
-              Navigator.pushNamed(context, '/dashboard');
+              final routeName = ModalRoute.of(context)?.settings.name;
+              if (routeName == '/journal') {
+                onHomePressed?.call(); // 👈 scroll to top
+              } else {
+                Navigator.pushNamed(context, '/dashboard');
+              }
             },
             tooltip: 'Home',
           ),
@@ -42,12 +52,12 @@ class MainScaffold extends StatelessWidget {
             },
             itemBuilder: (BuildContext context) => [
               const PopupMenuItem(
-                value: '/gallery',
-                child: Text('Dream Gallery', style: TextStyle(color: Colors.white)),
-              ),
-              PopupMenuItem(
                 value: '/journal',
                 child: Text('Dream Journal', style: TextStyle(color: Colors.white)),
+              ),
+              PopupMenuItem(
+                value: '/gallery',
+                child: Text('Dream Gallery', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
                 value: '/dashboard',

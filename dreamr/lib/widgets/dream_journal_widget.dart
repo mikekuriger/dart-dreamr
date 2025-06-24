@@ -6,15 +6,25 @@ import 'package:intl/intl.dart';
 
 
 class DreamJournalWidget extends StatefulWidget {
-  // const DreamJournalWidget({super.key});
   final VoidCallback? onDreamsLoaded;
-  const DreamJournalWidget({super.key, this.onDreamsLoaded});
+
+  const DreamJournalWidget({
+    super.key,
+    this.onDreamsLoaded,
+  });
 
   @override
   State<DreamJournalWidget> createState() => DreamJournalWidgetState();
 }
 
+class ToneStyle {
+  final Color background;
+  final Color text;
+  const ToneStyle(this.background, this.text);
+}
+
 class DreamJournalWidgetState extends State<DreamJournalWidget> {
+  
   List<Dream> _dreams = [];
   List<Dream> getDreams() => _dreams;
 
@@ -36,7 +46,7 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
       case 'whimsical / surreal':
         return Colors.purple.shade100;
       case 'nightmarish / dark':
-        return Colors.red.shade100;
+        return Colors.black;
       case 'romantic / nostalgic':
         return Colors.pink.shade100;
       case 'ancient / mythic':
@@ -49,7 +59,31 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
         return Colors.grey.shade100;
     }
   }
-
+  
+  ToneStyle _getToneStyle(String tone) {
+    final t = tone.toLowerCase().trim();
+    switch (t) {
+      case 'peaceful / gentle':
+        return ToneStyle(Colors.blue.shade100, Colors.black87);
+      case 'epic / heroic':
+        return ToneStyle(Colors.orange.shade100, Colors.black87);
+      case 'whimsical / surreal':
+        return ToneStyle(Colors.purple.shade100, Colors.black87);
+      case 'nightmarish / dark':
+        // return ToneStyle(Colors.black, Colors.red.shade500);  // 👈 spooky red
+        return ToneStyle(Colors.grey.shade900, Colors.orange.shade200);  // 👈 spooky red
+      case 'romantic / nostalgic':
+        return ToneStyle(Colors.pink.shade100, Colors.black87);
+      case 'ancient / mythic':
+        return ToneStyle(Colors.brown.shade100, Colors.black87);
+      case 'futuristic / uncanny':
+        return ToneStyle(Colors.teal.shade100, Colors.black87);
+      case 'elegant / ornate':
+        return ToneStyle(Colors.indigo.shade100, Colors.black87);
+      default:
+        return ToneStyle(Colors.grey.shade100, Colors.black87);
+    }
+  }
 
   Future<void> _loadDreams() async {
     try {
@@ -81,7 +115,7 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 0), // remove side gap
       child: ListView.builder(
-        padding: EdgeInsets.zero, // remove internal ListView padding
+        padding: EdgeInsets.zero, 
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: _dreams.length,
@@ -159,9 +193,9 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
         itemBuilder: (context, index) {
           final dream = _dreams[index];
           final isExpanded = _expanded[dream.id] ?? false;
-          // final formattedDate = DateFormat.yMMMd().add_jm().format(dream.createdAt.toLocal());
-          final formattedDate = DateFormat('EEE, MMM d, y h:mm a').format(dream.createdAt.toLocal());
+          final toneStyle = _getToneStyle(dream.tone);
 
+          final formattedDate = DateFormat('EEE, MMM d, y h:mm a').format(dream.createdAt.toLocal());
 
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 3), // space between cards
@@ -170,8 +204,8 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
               padding: const EdgeInsets.all(8), // inner padding inside the white box
               decoration: BoxDecoration(
 
-                // color: Colors.white,
-                color: _getToneColor(dream.tone),
+                // color: _getToneColor(dream.tone),
+                color: toneStyle.background,
 
                 borderRadius: BorderRadius.circular(4),
               ),
@@ -204,18 +238,19 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
                             children: [
                               Text(
                                 formattedDate,
-                                style: const TextStyle(fontSize: 12),
+                                style: TextStyle(fontSize: 12,color: toneStyle.text,),
                               ),
                               Text(
                                 dream.summary,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13,color: toneStyle.text,),
                               ),
                               Text(
                                 dream.tone,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 10,
                                   fontStyle: FontStyle.italic,
-                                  color: Colors.black87,
+                                  // color: Colors.black87,
+                                  color: toneStyle.text,
                                 ),
                               ),
 
@@ -233,15 +268,26 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
                       children: [
                         if (dream.text.isNotEmpty) ...[
                           Text(dream.text,
-                              style: const TextStyle(
-                                  fontSize: 12, fontStyle: FontStyle.italic)),
+                              style: TextStyle(
+                                  fontSize: 12, fontStyle: FontStyle.italic,color: toneStyle.text,)),
                           const SizedBox(height: 6),
                         ],
                         if (dream.analysis.isNotEmpty) ...[
-                          const Text("Analysis:",
+                          Text("Analysis:",
                               style:
-                                  TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                          MarkdownBody(data: dream.analysis),
+                                  TextStyle(fontSize: 13, fontWeight: FontWeight.bold,color: toneStyle.text,)),
+                          MarkdownBody(
+                            data: dream.analysis,
+                            styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                              p: TextStyle(color: toneStyle.text, fontSize: 12),
+                              strong: TextStyle(color: toneStyle.text, fontWeight: FontWeight.bold),
+                              em: TextStyle(color: toneStyle.text, fontStyle: FontStyle.italic),
+                              h1: TextStyle(color: toneStyle.text, fontSize: 18, fontWeight: FontWeight.bold),
+                              h2: TextStyle(color: toneStyle.text, fontSize: 16, fontWeight: FontWeight.bold),
+                              // Add more elements as needed
+                            ),
+                          ),
+
                           const SizedBox(height: 6),
                         ],
                         if (dream.imageFile != null && dream.imageFile!.isNotEmpty)

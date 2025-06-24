@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:dreamr/constants.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 
 class ApiService {
@@ -26,8 +27,8 @@ class ApiService {
         ),
       );
 
-      debugPrint("📦 Response status: ${response.statusCode}");
-      debugPrint("📦 Response data: ${response.data.runtimeType} - ${response.data}");
+      // debugPrint("📦 Response status: ${response.statusCode}");
+      // debugPrint("📦 Response data: ${response.data.runtimeType} - ${response.data}");
 
       if (response.statusCode == 200) {
         return "✅ Check your email to confirm your Dreamr✨ account.";
@@ -45,8 +46,9 @@ class ApiService {
 
 
   // Login using email + password
-  static Future<void> login(String email, String password) async {
-    final response = await DioClient.dio.post('/api/login',
+  static Future<Map<String, dynamic>> login(String email, String password) async {
+    final response = await DioClient.dio.post(
+      '/api/login',
       data: jsonEncode({
         'email': email,
         'password': password,
@@ -56,7 +58,27 @@ class ApiService {
     if (response.statusCode != 200) {
       throw Exception('Login failed: ${response.statusMessage}');
     }
+
+    final secureStorage = FlutterSecureStorage();
+
+    await secureStorage.write(key: 'email', value: email);
+    await secureStorage.write(key: 'password', value: password);
+    
+    return response.data['user'];
   }
+
+  // static Future<void> login(String email, String password) async {
+  //   final response = await DioClient.dio.post('/api/login',
+  //     data: jsonEncode({
+  //       'email': email,
+  //       'password': password,
+  //     }),
+  //   );
+
+  //   if (response.statusCode != 200) {
+  //     throw Exception('Login failed: ${response.statusMessage}');
+  //   }
+  // }
 
   // Google auth
   static Future<void> googleLogin(String idToken) async {

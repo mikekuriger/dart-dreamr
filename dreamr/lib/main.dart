@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-// import 'screens/splash_screen.dart';
+import 'package:dreamr/screens/splash_screen.dart';
 import 'package:dreamr/screens/login_screen.dart';
 import 'package:dreamr/screens/register_screen.dart';
 import 'package:dreamr/screens/dashboard_screen.dart';
 import 'package:dreamr/screens/dream_journal_screen.dart';
 import 'package:dreamr/screens/dream_gallery_screen.dart';
-import 'services/dio_client.dart';
+import 'package:dreamr/services/dio_client.dart';
 import 'package:dreamr/theme/colors.dart';
 
 void main() async {
@@ -25,8 +25,8 @@ class DreamrApp extends StatelessWidget {
       theme: ThemeData(
         scaffoldBackgroundColor: AppColors.purple850,        // main background color
       ),
-      // home: const SplashScreen(),  // 🚀 Start here
-      home: const LoginScreen(),
+      home: const SplashScreen(),  // 🚀 Start here
+      // home: const LoginScreen(),
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),

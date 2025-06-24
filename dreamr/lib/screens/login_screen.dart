@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:dreamr/services/api_service.dart';
 import 'package:dreamr/theme/colors.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -25,6 +28,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleGoogleLogin() async {
     try {
       final account = await _googleSignIn.signIn();
+      final storage = FlutterSecureStorage();
+      await storage.write(key: 'login_method', value: 'google');
+      // await storage.write(key: 'email', value: user.email);
+
+
 
       if (account == null) {
         setState(() {
@@ -65,7 +73,13 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await ApiService.login(email, password);
+      final user = await ApiService.login(email, password);
+
+      // 🔐 Save session state to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('loggedIn', true);
+      await prefs.setInt('userId', user['id']);
+
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/dashboard');
     } catch (e) {
