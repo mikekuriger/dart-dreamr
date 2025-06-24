@@ -47,3 +47,8 @@ app.*.map.json
 Trash/
 dreamr/build/
 flutter_old/
+android/build/
+macos/Podfile.lock
+web/splash/
+widget
+header
