@@ -40,9 +40,6 @@ app.*.symbols
 app.*.map.json
 
 # Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
 /flutter
 Trash/
 dreamr/build/
@@ -52,3 +49,12 @@ macos/Podfile.lock
 web/splash/
 widget
 header
+dreamr/android/build/
+dreamr/android/app/debug
+dreamr/android/app/profile
+dreamr/android/app/release
+dreamr/ios/Runner/Assets.xcassets/LaunchBackground.imageset/
+dreamr/lib/widgets/main_scaffold.dart.ori
+dreamr/lib/widgets/main_scaffold.dart.ori2
+dreamr/macos/Podfile.lock
+dreamr/web/splash/
