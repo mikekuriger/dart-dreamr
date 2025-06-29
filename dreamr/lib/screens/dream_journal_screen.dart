@@ -76,147 +76,70 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
       _longestWordCount = maxWords;
     });
   }
-
+  
   @override
   Widget build(BuildContext context) {
-    return MainScaffold(
-      onHomePressed: _scrollToTop,
-      // title: const Text("Dream Journal ✍️", style: TextStyle(color: Colors.white)),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            "Dreamr ✨ Journal ✍️",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          SizedBox(height: 2),
-          Text(
-            "Your personal AI-powered dream analysis",
-            style: TextStyle(
-              fontSize: 11,
-              fontStyle: FontStyle.italic,
-              color: Color(0xFFD1B2FF),
-            ),
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          _refreshJournal();
-          _loadStats();
-        },
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(4),  // padding for dream boxes
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            children: [
-              // TableCalendar(
-              //   firstDay: DateTime.utc(2020),
-              //   lastDay: DateTime.utc(2030),
-              //   focusedDay: _focusedDay,
-              //   selectedDayPredicate: (day) =>
-              //       _selectedDay != null && isSameDay(_selectedDay, day),
-              //   onDaySelected: (selectedDay, focusedDay) {
-              //     setState(() {
-              //       _selectedDay = selectedDay;
-              //       _focusedDay = focusedDay;
-              //       // For now, doesn't filter—just updates state
-              //     });
-              //   },
-              //   calendarStyle: const CalendarStyle(
-              //     todayDecoration: BoxDecoration(
-              //       color: Colors.deepPurple,
-              //       shape: BoxShape.circle,
-              //     ),
-              //     selectedDecoration: BoxDecoration(
-              //       color: Colors.purple,
-              //       shape: BoxShape.circle,
-              //     ),
-              //   ),
-              // ),
-
-              // STATS + BUTTON
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.deepPurple.shade600,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "🧠 Dream Stats",
-                        style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 6),
-                      Text("Dreams Logged: $_dreamCount", style: const TextStyle(color: Colors.white)),
-                      Text("Most Common Tone: $_mostCommonTone", style: const TextStyle(color: Colors.white)),
-                      Text("Longest Dream: $_longestWordCount words", style: const TextStyle(color: Colors.white)),
-
-                      const SizedBox(height: 10),
-
-                      // 👇 New Dream button inside the box
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.edit_note),
-                          label: const Text("Add a New Dream"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.deepPurple.shade600,
-                          ),
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/dashboard');
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
+    return RefreshIndicator(
+      onRefresh: () async {
+        _refreshJournal();
+        _loadStats();
+      },
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(4),
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.shade600,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "🧠 Dream Stats",
+                      style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    Text("Dreams Logged: $_dreamCount", style: const TextStyle(color: Colors.white)),
+                    Text("Most Common Tone: $_mostCommonTone", style: const TextStyle(color: Colors.white)),
+                    Text("Longest Dream: $_longestWordCount words", style: const TextStyle(color: Colors.white)),
+                    const SizedBox(height: 10),
+                    // Align(
+                    //   alignment: Alignment.centerLeft,
+                    //   child: ElevatedButton.icon(
+                    //     icon: const Icon(Icons.edit_note),
+                    //     label: const Text("Add a New Dream"),
+                    //     style: ElevatedButton.styleFrom(
+                    //       backgroundColor: Colors.white,
+                    //       foregroundColor: Colors.deepPurple.shade600,
+                    //       shape: RoundedRectangleBorder(
+                    //         borderRadius: BorderRadius.circular(10),
+                    //         )
+                    //       ),
+                    //     onPressed: () {
+                    //       Navigator.pushReplacement(
+                    //         context,
+                    //         MaterialPageRoute(builder: (context) => const MainScaffold(initialIndex: 0)),
+                    //       );
+                    //     },
+                    //   ),
+                    // ),
+                  ],
                 ),
               ),
-
-              // stats
-              // Padding(
-              //   padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
-              //   child: Container(
-              //     width: double.infinity,
-              //     padding: const EdgeInsets.all(12),
-              //     decoration: BoxDecoration(
-              //       color: Colors.deepPurple.shade600,
-              //       borderRadius: BorderRadius.circular(8),
-              //     ),
-              //     child: Column(
-              //       crossAxisAlignment: CrossAxisAlignment.start,
-              //       children: [
-              //         const Text(
-              //           "🧠 Dream Stats",
-              //           style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
-              //         ),
-              //         const SizedBox(height: 6),
-              //         Text("Dreams Logged: $_dreamCount", style: const TextStyle(color: Colors.white)),
-              //         Text("Most Common Tone: $_mostCommonTone", style: const TextStyle(color: Colors.white)),
-              //         Text("Longest Dream: $_longestWordCount words", style: const TextStyle(color: Colors.white)),
-              //       ],
-              //     ),
-              //   ),
-              // ),
-
-              // const SizedBox(height: 0),  // extra space 
-              DreamJournalWidget(
-                key: _journalKey,
-                onDreamsLoaded: _loadStats,
-              ),
-            ],
-          ),
+            ),
+            DreamJournalWidget(
+              key: _journalKey,
+              onDreamsLoaded: _loadStats,
+            ),
+          ],
         ),
       ),
     );

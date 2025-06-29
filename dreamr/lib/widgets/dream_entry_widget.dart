@@ -161,7 +161,7 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 onPressed: (_loading || _imageGenerating) ? null : _submitDream,
@@ -232,22 +232,22 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
             const SizedBox(width: 8), // gap between buttons
 
             // Save Button
-            SizedBox(
-              width: 120,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.purple600,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: (_loading || _imageGenerating) ? null : _submitDream,
-                child: const Text("Save"),
-              ),
-            ),
+            // SizedBox(
+            //   width: 120,
+            //   child: ElevatedButton(
+            //     style: ElevatedButton.styleFrom(
+            //       backgroundColor: AppColors.purple600,
+            //       foregroundColor: Colors.white,
+            //       padding: const EdgeInsets.symmetric(vertical: 12),
+            //       textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            //       shape: RoundedRectangleBorder(
+            //         borderRadius: BorderRadius.circular(10),
+            //       ),
+            //     ),
+            //     onPressed: (_loading || _imageGenerating) ? null : _submitDream,
+            //     child: const Text("Save"),
+            //   ),
+            // ),
           ],
         ),
 

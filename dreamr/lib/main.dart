@@ -23,7 +23,7 @@ class DreamrApp extends StatelessWidget {
       title: 'Dreamr',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        scaffoldBackgroundColor: AppColors.purple850,        // main background color
+        scaffoldBackgroundColor: AppColors.purple900,        // main background color
       ),
       home: const SplashScreen(),  // 🚀 Start here
       // home: const LoginScreen(),
@@ -33,7 +33,7 @@ class DreamrApp extends StatelessWidget {
         '/dashboard': (context) => const DashboardScreen(),
         '/journal': (context) => const DreamJournalScreen(),
         '/gallery': (context) => const DreamGalleryScreen(),
-        '/image': (context) => const Placeholder(), // temporary
+        '/image': (context) => const Placeholder(), 
 
       },
     );

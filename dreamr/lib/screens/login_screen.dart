@@ -1,3 +1,4 @@
+import 'package:dreamr/widgets/main_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:dreamr/services/api_service.dart';
 import 'package:dreamr/theme/colors.dart';
@@ -53,7 +54,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
       await ApiService.googleLogin(idToken);
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/dashboard');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainScaffold(initialIndex: 1)),
+      );
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -81,7 +85,10 @@ class _LoginScreenState extends State<LoginScreen> {
       await prefs.setInt('userId', user['id']);
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/dashboard');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainScaffold(initialIndex: 1)),
+      );
     } catch (e) {
       setState(() {
         _errorMessage = "Invalid login";

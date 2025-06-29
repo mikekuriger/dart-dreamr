@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dreamr/services/api_service.dart';
+import 'package:dreamr/widgets/main_scaffold.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -34,7 +35,10 @@ class _SplashScreenState extends State<SplashScreen> {
             await ApiService.googleLogin(idToken);
 
             if (!mounted) return;
-            Navigator.pushReplacementNamed(context, '/dashboard');
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const MainScaffold()),
+            );
             return;
           }
         }
@@ -49,7 +53,10 @@ class _SplashScreenState extends State<SplashScreen> {
       try {
         await ApiService.login(email, password);
         if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainScaffold()),
+        );
         return;
       } catch (e) {
         // Login failed, fall through to login screen
