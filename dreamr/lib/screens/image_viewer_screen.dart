@@ -6,10 +6,10 @@ class ImageViewerScreen extends StatefulWidget {
   final int initialIndex;
 
   const ImageViewerScreen({
-    Key? key,
+    super.key,
     required this.dreams,
     required this.initialIndex,
-  }) : super(key: key);
+  });
 
   @override
   State<ImageViewerScreen> createState() => _ImageViewerScreenState();
@@ -57,7 +57,7 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
-                    dream.summary ?? '',
+                    dream.summary,
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),

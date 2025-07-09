@@ -37,28 +37,6 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
     _loadDreams();
   }
 
-  Color _getToneColor(String tone) {
-    switch (tone.toLowerCase().trim()) {
-      case 'peaceful / gentle':
-        return Colors.blue.shade100;
-      case 'epic / heroic':
-        return Colors.orange.shade100;
-      case 'whimsical / surreal':
-        return Colors.purple.shade100;
-      case 'nightmarish / dark':
-        return Colors.black;
-      case 'romantic / nostalgic':
-        return Colors.pink.shade100;
-      case 'ancient / mythic':
-        return Colors.brown.shade100;
-      case 'futuristic / uncanny':
-        return Colors.teal.shade100;
-      case 'elegant / ornate':
-        return Colors.indigo.shade100;
-      default:
-        return Colors.grey.shade100;
-    }
-  }
   
   ToneStyle _getToneStyle(String tone) {
     final t = tone.toLowerCase().trim();

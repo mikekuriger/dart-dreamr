@@ -7,6 +7,8 @@ import 'package:dreamr/screens/dream_journal_screen.dart';
 import 'package:dreamr/screens/dream_gallery_screen.dart';
 import 'package:dreamr/services/dio_client.dart';
 import 'package:dreamr/theme/colors.dart';
+import 'package:dreamr/constants.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,9 +32,9 @@ class DreamrApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
-        '/dashboard': (context) => const DashboardScreen(),
-        '/journal': (context) => const DreamJournalScreen(),
-        '/gallery': (context) => const DreamGalleryScreen(),
+        '/dashboard': (context) => DashboardScreen(refreshTrigger: dreamEntryRefreshTrigger),
+        '/journal': (context) => DreamJournalScreen(refreshTrigger: journalRefreshTrigger),
+        '/gallery': (context) => DreamGalleryScreen(refreshTrigger: galleryRefreshTrigger),
         '/image': (context) => const Placeholder(), 
 
       },

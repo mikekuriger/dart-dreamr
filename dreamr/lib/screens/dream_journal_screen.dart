@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:dreamr/widgets/dream_journal_widget.dart';
-import 'package:dreamr/widgets/main_scaffold.dart';
-import 'package:table_calendar/table_calendar.dart';
+// import 'package:dreamr/widgets/main_scaffold.dart';
+// import 'package:table_calendar/table_calendar.dart';
+import 'package:dreamr/constants.dart';
+
 
 
 class DreamJournalScreen extends StatefulWidget {
-  const DreamJournalScreen({super.key});
+  final ValueNotifier<int> refreshTrigger;
+  const DreamJournalScreen({super.key, required this.refreshTrigger});
 
   @override
   State<DreamJournalScreen> createState() => _DreamJournalScreenState();
@@ -20,7 +23,7 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
 
   final ScrollController _scrollController = ScrollController();
   void _scrollToTop() {
-    print('📢 Scroll attempt: offset = ${_scrollController.offset}');
+    // print('📢 Scroll attempt: offset = ${_scrollController.offset}');
     _scrollController.animateTo(
       0.0,
       duration: const Duration(milliseconds: 300),
@@ -32,8 +35,21 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
   void initState() {
     super.initState();
 
+    // Initial load after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadStats();
+    });
+
+    // ✅ Listen for bottom nav tab refresh
+    widget.refreshTrigger.addListener(_refreshJournal);
+
+    // Refresh journal if a new dream was added
+    dreamDataChanged.addListener(() {
+      if (dreamDataChanged.value == true) {
+        _refreshJournal();
+        _loadStats();
+        dreamDataChanged.value = false;
+      }
     });
   }
 
@@ -77,6 +93,13 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
     });
   }
   
+  @override
+  void dispose() {
+    widget.refreshTrigger.removeListener(_refreshJournal);
+    dreamDataChanged.removeListener(_refreshJournal);  // if you want to clean that too
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(

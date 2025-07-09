@@ -16,7 +16,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   String _errorMessage = '';
-  bool _loading = false;
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
@@ -91,7 +90,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     setState(() {
-      _loading = true;
       _errorMessage = '';
     });
 
@@ -140,7 +138,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } finally {
       if (mounted) {
         setState(() {
-          _loading = false;
         });
       }
     }

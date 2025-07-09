@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:dreamr/services/api_service.dart';
 import 'package:dreamr/theme/colors.dart';
-import 'dart:developer' as developer;
+// import 'dart:developer' as developer;
+import 'package:dreamr/constants.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+
 
 
 class DreamEntryWidget extends StatefulWidget {
   final VoidCallback? onSubmitComplete;
+  final ValueNotifier<int> refreshTrigger;
 
-  //const DreamEntryWidget({Key? key, required this.onSubmitComplete}) : super(key: key);
-  const DreamEntryWidget({Key? key, this.onSubmitComplete}) : super(key: key);
+  const DreamEntryWidget({
+    super.key,
+    this.onSubmitComplete,
+    required this.refreshTrigger,
+  });
 
   @override
   State<DreamEntryWidget> createState() => _DreamEntryWidgetState();
@@ -21,6 +28,17 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
   String? _message;
   String? _userName;
   String? _dreamImagePath;
+
+
+  void _refreshFromTrigger() {
+    // Logic to refresh Dream Entry UI
+    setState(() {
+      _message = null;
+      _controller.clear();
+      _dreamImagePath = null;
+    });
+  }
+
 
   // Submit Dream
   Future<void> _submitDream() async {
@@ -41,12 +59,16 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
       final int dreamId = int.parse(result['dream_id'].toString());
 
       setState(() {
-        _message = "Dream Interpretation:\n$analysis\n\nThis dream feels *$tone*.";
-        _imageGenerating = true;
-        developer.log("_imageGenerating set to TRUE", name: 'ButtonState');
+        // _message = "Dream Interpretation:\n$analysis\n\nThis dream feels *$tone*.";
+        final toneLine = (tone.trim().isNotEmpty && tone != 'null')
+            ? "\n\nThis dream feels *$tone*."
+            : "";
 
+        _message = "Dream Interpretation:\n$analysis$toneLine";
+        _imageGenerating = true;
       });
 
+      dreamDataChanged.value = true;
       _controller.clear();
       widget.onSubmitComplete?.call();
 
@@ -54,13 +76,13 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
       await _generateDreamImage(dreamId);
 
     } catch (e) {
-      developer.log("Dream submission failed", error: e, name: 'DreamEntry');
+      // developer.log("Dream submission failed", error: e, name: 'DreamEntry');
       setState(() {
         _message = "Dream submission failed.";
       });
 
     } finally {
-      developer.log("Image URL received, setting state", name: 'ImageGen');
+      // developer.log("Image URL received, setting state", name: 'ImageGen');
       setState(() {
         _loading = false;
       });
@@ -76,17 +98,24 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
         _imageGenerating = false;
       });
       
-      developer.log("Image generated: $imagePath", name: 'ImageGen');
+      // developer.log("Image generated: $imagePath", name: 'ImageGen');
 
       // Optionally show image or update the UI
     } catch (e) {
-      developer.log("Image generation failed", error: e, name: 'ImageGen');
+      // developer.log("Image generation failed", error: e, name: 'ImageGen');
     }
   }
 
   @override
+  void dispose() {
+    widget.refreshTrigger.removeListener(_refreshFromTrigger);
+    super.dispose();
+  }
+  
+  @override
   void initState() {
     super.initState();
+    widget.refreshTrigger.addListener(_refreshFromTrigger);
     _loadUserName();
   }
 
@@ -189,103 +218,10 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
                 ),
               ),
             ),
-            //   child: Builder(
-            //     builder: (context) {
-            //       return ElevatedButton(
-            //         style: ElevatedButton.styleFrom(
-            //           backgroundColor: AppColors.purple600,
-            //           foregroundColor: Colors.white,
-            //           padding: const EdgeInsets.symmetric(vertical: 12),
-            //           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            //           shape: RoundedRectangleBorder(
-            //             borderRadius: BorderRadius.circular(8),
-            //           ),
-            //         ),
-            //         onPressed: (_loading || _imageGenerating) ? null : _submitDream,
-            //         child: Row(
-            //           mainAxisAlignment: MainAxisAlignment.center,
-            //           children: [
-            //             if (_loading || _imageGenerating)
-            //               const SizedBox(
-            //                 width: 18,
-            //                 height: 18,
-            //                 child: CircularProgressIndicator(
-            //                   strokeWidth: 2,
-            //                   color: Colors.white,
-            //                 ),
-            //               ),
-            //             if (_loading || _imageGenerating) const SizedBox(width: 8),
-            //             Text(
-            //               _imageGenerating
-            //                   ? "Generating..."
-            //                   : _loading
-            //                       ? "Analyzing..."
-            //                       : "Analyze",
-            //             )
-            //           ],
-            //         ),
-            //       );
-            //     },
-            //   ),
-            // ),
-
             const SizedBox(width: 8), // gap between buttons
-
-            // Save Button
-            // SizedBox(
-            //   width: 120,
-            //   child: ElevatedButton(
-            //     style: ElevatedButton.styleFrom(
-            //       backgroundColor: AppColors.purple600,
-            //       foregroundColor: Colors.white,
-            //       padding: const EdgeInsets.symmetric(vertical: 12),
-            //       textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            //       shape: RoundedRectangleBorder(
-            //         borderRadius: BorderRadius.circular(10),
-            //       ),
-            //     ),
-            //     onPressed: (_loading || _imageGenerating) ? null : _submitDream,
-            //     child: const Text("Save"),
-            //   ),
-            // ),
           ],
         ),
 
-
-        // ElevatedButton(
-        //   style: ElevatedButton.styleFrom(
-        //     backgroundColor: AppColors.purple600, // Button background
-        //     foregroundColor: Colors.white,  // Text (and spinner) color
-        //     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-        //     textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        //     shape: RoundedRectangleBorder(
-        //       borderRadius: BorderRadius.circular(8), // ← adjust this value
-        //     ),
-        //   ),
-        //   onPressed: (_loading || _imageGenerating) ? null : _submitDream,
-        //   child: Row(
-        //     mainAxisSize: MainAxisSize.min,
-        //     children: [
-        //       if (_loading || _imageGenerating)
-        //         const SizedBox(
-        //           width: 18,
-        //           height: 18,
-        //           child: CircularProgressIndicator(
-        //             strokeWidth: 2,
-        //             color: Colors.white,
-        //           ),
-        //         ),
-        //       if (_loading || _imageGenerating) const SizedBox(width: 8),
-        //       Text(
-        //         _loading
-        //             ? "Analyzing Dream..."
-        //             : _imageGenerating
-        //                 ? "Generating Dream Image..."
-        //                 : "Submit Dream",
-        //       ),
-        //     ],
-        //   ),
-        // ),
         if (_message != null)
           Container(
             margin: const EdgeInsets.only(top: 12),
@@ -297,9 +233,11 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _message!,
-                  style: const TextStyle(color: Colors.black87),
+                MarkdownBody(
+                  data: _message!,
+                  styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                    p: const TextStyle(color: Colors.black87),
+                  ),
                 ),
 
                 if (_imageGenerating) ...[
@@ -326,29 +264,6 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
               ],
             ),
           ),
-        // if (_message != null)
-        //   Container(
-        //     margin: const EdgeInsets.only(top: 12),
-        //     padding: const EdgeInsets.all(12),
-        //     decoration: BoxDecoration(
-        //       color: Colors.purple.shade50,
-        //       borderRadius: BorderRadius.circular(12),
-        //     ),
-        //     child: Text(
-        //       _message!,
-        //       style: const TextStyle(color: Colors.black87),
-        //     ),
-        //   ),
-
-        //   if (_dreamImagePath != null)
-        //   Padding(
-        //     padding: const EdgeInsets.only(top: 12),
-        //     child: Image.network(
-        //       _dreamImagePath!,
-        //       height: 300,
-        //       fit: BoxFit.cover,
-        //     ),
-        //   ),
       ],
     );
   }

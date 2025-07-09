@@ -3,10 +3,13 @@ import 'package:dreamr/models/dream.dart';
 import 'package:dreamr/services/api_service.dart';
 // import 'package:dreamr/widgets/main_scaffold.dart';
 import 'package:dreamr/screens/image_viewer_screen.dart';
+import 'package:dreamr/constants.dart';
+
 
 
 class DreamGalleryScreen extends StatefulWidget {
-  const DreamGalleryScreen({Key? key}) : super(key: key);
+  final ValueNotifier<int> refreshTrigger;
+  const DreamGalleryScreen({super.key, required this.refreshTrigger});
 
   @override
   State<DreamGalleryScreen> createState() => _DreamGalleryScreenState();
@@ -19,11 +22,40 @@ class _DreamGalleryScreenState extends State<DreamGalleryScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Initial load
     _loadDreams();
+
+    // Refresh every time index changes
+    widget.refreshTrigger.addListener(() {
+      _loadDreams(); 
+    });
+
+    // Listen for changes to dream data
+    dreamDataChanged.addListener(_handleDreamDataChanged);
+  }
+
+  void _handleDreamDataChanged() {
+    if (dreamDataChanged.value) {
+      _loadDreams(); // 👈 Refresh gallery
+      dreamDataChanged.value = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    dreamDataChanged.removeListener(_handleDreamDataChanged);
+    widget.refreshTrigger.removeListener(_loadDreams);  // if you used addListener inline above
+    super.dispose();
   }
 
   Future<void> _loadDreams() async {
-    final dreams = await ApiService.fetchDreams(); // assumes .image_tile and .summary are available
+    setState(() {
+      _loading = true;
+    });
+
+    final dreams = await ApiService.fetchDreams();
+
     setState(() {
       _dreams = dreams;
       _loading = false;
@@ -78,7 +110,7 @@ class _DreamGalleryScreenState extends State<DreamGalleryScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                dream.summary ?? '',
+                dream.summary,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: Colors.white, fontSize: 12),

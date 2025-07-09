@@ -18,6 +18,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  // ignore: unused_field
   String _errorMessage = '';
   bool _loading = false;
 
@@ -32,8 +33,6 @@ class _LoginScreenState extends State<LoginScreen> {
       final storage = FlutterSecureStorage();
       await storage.write(key: 'login_method', value: 'google');
       // await storage.write(key: 'email', value: user.email);
-
-
 
       if (account == null) {
         setState(() {

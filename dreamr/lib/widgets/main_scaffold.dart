@@ -4,6 +4,8 @@ import 'package:dreamr/screens/dashboard_screen.dart';
 import 'package:dreamr/screens/dream_journal_screen.dart';
 import 'package:dreamr/screens/dream_gallery_screen.dart';
 // import 'package:dreamr/screens/profile_screen.dart';
+import 'package:dreamr/constants.dart';
+
 
 
 class MainScaffold extends StatefulWidget {
@@ -69,39 +71,40 @@ class _MainScaffoldState extends State<MainScaffold> {
     super.initState();
     _selectedIndex = widget.initialIndex;
     _views = [
-      DashboardScreen(),
-      DreamJournalScreen(),
-      DreamGalleryScreen(),
-      // ProfileScreen(),
+      DashboardScreen(refreshTrigger: dreamEntryRefreshTrigger),
+      DreamJournalScreen(refreshTrigger: journalRefreshTrigger),
+      DreamGalleryScreen(refreshTrigger: galleryRefreshTrigger),
+      //ProfileScreen(refreshTrigger: profileRefreshTrigger),
     ];
+  }
+
+  void _onBottomNavTapped(int index) {
+    // Trigger refresh logic based on index
+    switch (index) {
+      case 0:
+        dreamEntryRefreshTrigger.value++;
+        break;
+      case 1:
+        journalRefreshTrigger.value++;
+        break;
+      case 2:
+        galleryRefreshTrigger.value++;
+        break;
+      case 3:
+        profileRefreshTrigger.value++;
+        break;
+    }
+    
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   // void _onBottomNavTapped(int index) {
   //   setState(() {
   //     _selectedIndex = index;
   //   });
-
-  //   switch (index) {
-  //     case 0:
-  //       Navigator.pushNamed(context, '/dashboard');
-  //       break;
-  //     case 1:
-  //       Navigator.pushNamed(context, '/journal');
-  //       break;
-  //     case 2:
-  //       Navigator.pushNamed(context, '/gallery');
-  //       break;
-  //     case 3:
-  //       Navigator.pushNamed(context, '/profile');
-  //       break;
-  //   }
   // }
-
-  void _onBottomNavTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {

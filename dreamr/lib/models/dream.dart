@@ -7,6 +7,7 @@ class Dream {
   final String analysis;
   final String summary;
   final String tone;
+  final String imagePrompt;
   final bool hidden;
   final DateTime createdAt;
   final String? imageFile;
@@ -19,6 +20,7 @@ class Dream {
     required this.analysis,
     required this.summary,
     required this.tone,
+    required this.imagePrompt,
     required this.hidden,
     required this.createdAt,
     this.imageFile,
@@ -33,6 +35,7 @@ class Dream {
       analysis: json['analysis'] ?? '',
       summary: json['summary'] ?? '',
       tone: json['tone'] ?? '',
+      imagePrompt: json['image_prompt'] ?? '',
       hidden: json['hidden'] ?? false,
       createdAt: DateTime.parse(json['created_at']),
       imageFile: json['image_file'] != null
