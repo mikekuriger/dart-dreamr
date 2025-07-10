@@ -250,15 +250,19 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
 
                 if (_dreamImagePath != null && _dreamImagePath!.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      _dreamImagePath!,
-                      height: 300,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Text("⚠️ Failed to load image."),
-                    ),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          _dreamImagePath!,
+                          width: constraints.maxWidth,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Text("⚠️ Failed to load image."),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ],
