@@ -72,7 +72,7 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
       });
       widget.onDreamsLoaded?.call();
     } catch (e) {
-      print("❌ Failed to fetch dreams: $e");
+      // print("❌ Failed to fetch dreams: $e");
       setState(() {
         _loading = false;
       });

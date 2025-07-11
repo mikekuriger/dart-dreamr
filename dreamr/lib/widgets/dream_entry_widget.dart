@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:dreamr/services/api_service.dart';
 import 'package:dreamr/theme/colors.dart';
-// import 'dart:developer' as developer;
 import 'package:dreamr/constants.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 
 
 class DreamEntryWidget extends StatefulWidget {
@@ -31,16 +29,6 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
   String? _message;
   String? _userName;
   String? _dreamImagePath;
-  // bool _suppressAutosave = false;
-
-  // void _refreshFromTrigger() {
-  //   // Logic to refresh Dream Entry UI
-  //   setState(() {
-  //     _message = null;
-  //     _controller.clear();
-  //     _dreamImagePath = null;
-  //   });
-  // }
 
   void _refreshFromTrigger() async {
     final prefs = await SharedPreferences.getInstance();
@@ -51,7 +39,7 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
       });
     }
   }
-  
+
   // Submit Dream
   Future<void> _submitDream() async {
     final text = _controller.text.trim();
@@ -192,8 +180,7 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
             "Tell me about your dream in as much detail as you remember — characters, settings, emotions, anything that stood out. "
             "After submitting, I will take a moment to analyze your dream and generate a personalized interpretation. "
             "Your dream interpretation takes a few moments, but your dream image will take me a minute or so to create.\n"
-            "So go poop while the magic happens ✨",
-            // "So sit tight while the magic happens ✨",
+            "So sit tight while the magic happens ✨",
             style: TextStyle(
               fontSize: 13,
               color: Colors.white,

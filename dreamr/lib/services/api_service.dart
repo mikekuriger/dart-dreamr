@@ -27,9 +27,6 @@ class ApiService {
         ),
       );
 
-      // debugPrint("📦 Response status: ${response.statusCode}");
-      // debugPrint("📦 Response data: ${response.data.runtimeType} - ${response.data}");
-
       if (response.statusCode == 200) {
         return "✅ Check your email to confirm your Dreamr✨ account.";
       } else {
@@ -42,7 +39,6 @@ class ApiService {
         }
       }
   }
-
 
 
   // Login using email + password
@@ -67,18 +63,6 @@ class ApiService {
     return response.data['user'];
   }
 
-  // static Future<void> login(String email, String password) async {
-  //   final response = await DioClient.dio.post('/api/login',
-  //     data: jsonEncode({
-  //       'email': email,
-  //       'password': password,
-  //     }),
-  //   );
-
-  //   if (response.statusCode != 200) {
-  //     throw Exception('Login failed: ${response.statusMessage}');
-  //   }
-  // }
 
   // Google auth
   static Future<void> googleLogin(String idToken) async {
@@ -107,12 +91,7 @@ class ApiService {
   }
 
   // Submit a dream to the AI
-  // static Future<Map<String, dynamic>> submitDream(String text, {int? draftId}) async {
   static Future<Map<String, dynamic>> submitDream(String text) async {
-    // final data = {
-    //   'message': text,
-    //   if (draftId != null) 'id': draftId,
-    // };
 
     final response = await DioClient.dio.post(
       '/api/chat',
@@ -131,23 +110,6 @@ class ApiService {
       throw Exception('Dream submission failed: ${response.statusMessage}');
     }
   }
-
-  // Save dream for later
-  // static Future<Map<String, dynamic>> saveDraft(String text) async {
-  //   final response = await DioClient.dio.post(
-  //     '/api/draft',
-  //     data: jsonEncode({'message': text}),
-  //   );
-
-  //   if (response.statusCode == 200) {
-  //     final data = response.data;
-  //     return {
-  //       'dream_id': data['dream_id']?.toString() ?? '',
-  //     };
-  //   } else {
-  //     throw Exception('Draft submission failed: ${response.statusMessage}');
-  //   }
-  // }
 
   // Generate Image
   static Future<String> generateDreamImage(int dreamId) async {
