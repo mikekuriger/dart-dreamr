@@ -107,9 +107,16 @@ class ApiService {
   }
 
   // Submit a dream to the AI
+  // static Future<Map<String, dynamic>> submitDream(String text, {int? draftId}) async {
   static Future<Map<String, dynamic>> submitDream(String text) async {
+    // final data = {
+    //   'message': text,
+    //   if (draftId != null) 'id': draftId,
+    // };
+
     final response = await DioClient.dio.post(
       '/api/chat',
+      // data: jsonEncode(data),
       data: jsonEncode({'message': text}),
     );
 
@@ -124,6 +131,23 @@ class ApiService {
       throw Exception('Dream submission failed: ${response.statusMessage}');
     }
   }
+
+  // Save dream for later
+  // static Future<Map<String, dynamic>> saveDraft(String text) async {
+  //   final response = await DioClient.dio.post(
+  //     '/api/draft',
+  //     data: jsonEncode({'message': text}),
+  //   );
+
+  //   if (response.statusCode == 200) {
+  //     final data = response.data;
+  //     return {
+  //       'dream_id': data['dream_id']?.toString() ?? '',
+  //     };
+  //   } else {
+  //     throw Exception('Draft submission failed: ${response.statusMessage}');
+  //   }
+  // }
 
   // Generate Image
   static Future<String> generateDreamImage(int dreamId) async {

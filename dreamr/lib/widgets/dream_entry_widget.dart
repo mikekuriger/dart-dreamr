@@ -4,15 +4,18 @@ import 'package:dreamr/theme/colors.dart';
 // import 'dart:developer' as developer;
 import 'package:dreamr/constants.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 
 class DreamEntryWidget extends StatefulWidget {
+  final String? initialText;     // preload text
   final VoidCallback? onSubmitComplete;
   final ValueNotifier<int> refreshTrigger;
 
   const DreamEntryWidget({
     super.key,
+    this.initialText,
     this.onSubmitComplete,
     required this.refreshTrigger,
   });
@@ -28,18 +31,27 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
   String? _message;
   String? _userName;
   String? _dreamImagePath;
+  // bool _suppressAutosave = false;
 
+  // void _refreshFromTrigger() {
+  //   // Logic to refresh Dream Entry UI
+  //   setState(() {
+  //     _message = null;
+  //     _controller.clear();
+  //     _dreamImagePath = null;
+  //   });
+  // }
 
-  void _refreshFromTrigger() {
-    // Logic to refresh Dream Entry UI
-    setState(() {
-      _message = null;
-      _controller.clear();
-      _dreamImagePath = null;
-    });
+  void _refreshFromTrigger() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedText = prefs.getString('draft_text');
+    if (savedText != null && savedText.isNotEmpty) {
+      setState(() {
+        _controller.text = savedText;
+      });
+    }
   }
-
-
+  
   // Submit Dream
   Future<void> _submitDream() async {
     final text = _controller.text.trim();
@@ -59,7 +71,6 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
       final int dreamId = int.parse(result['dream_id'].toString());
 
       setState(() {
-        // _message = "Dream Interpretation:\n$analysis\n\nThis dream feels *$tone*.";
         final toneLine = (tone.trim().isNotEmpty && tone != 'null')
             ? "\n\nThis dream feels *$tone*."
             : "";
@@ -68,6 +79,9 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
         _imageGenerating = true;
       });
 
+      // Clear saved prefs and other stuff
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('draft_text');
       dreamDataChanged.value = true;
       _controller.clear();
       widget.onSubmitComplete?.call();
@@ -89,6 +103,19 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
     }
   }
 
+  // Save Dream Draft
+  Future<void> _saveDraft(String text) async {
+    final prefs = await SharedPreferences.getInstance();
+    final trimmed = text.trim();
+
+    if (trimmed.isEmpty) {
+      await prefs.remove('draft_text');
+    } else {
+      await prefs.setString('draft_text', trimmed);
+    }
+  }
+
+
   // Generate Image
   Future<void> _generateDreamImage(int dreamId) async {
     try {
@@ -98,11 +125,8 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
         _imageGenerating = false;
       });
       
-      // developer.log("Image generated: $imagePath", name: 'ImageGen');
-
-      // Optionally show image or update the UI
     } catch (e) {
-      // developer.log("Image generation failed", error: e, name: 'ImageGen');
+      // print("Failed to generate image: $e");
     }
   }
 
@@ -115,8 +139,24 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
   @override
   void initState() {
     super.initState();
+
+    _loadDraftText();
+    _controller.addListener(() {
+      if (_controller.text.trim().isNotEmpty) {
+        _saveDraft(_controller.text);
+      }
+    });
+
     widget.refreshTrigger.addListener(_refreshFromTrigger);
     _loadUserName();
+  }
+
+  void _loadDraftText() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedText = prefs.getString('draft_text');
+    if (savedText != null && savedText.isNotEmpty) {
+      _controller.text = savedText;
+    }
   }
 
   Future<void> _loadUserName() async {
@@ -152,7 +192,8 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
             "Tell me about your dream in as much detail as you remember — characters, settings, emotions, anything that stood out. "
             "After submitting, I will take a moment to analyze your dream and generate a personalized interpretation. "
             "Your dream interpretation takes a few moments, but your dream image will take me a minute or so to create.\n"
-            "So sit tight while the magic happens ✨",
+            "So go poop while the magic happens ✨",
+            // "So sit tight while the magic happens ✨",
             style: TextStyle(
               fontSize: 13,
               color: Colors.white,
@@ -185,8 +226,8 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.purple600,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.red, // 🔴 <- use red when disabled
-                  disabledForegroundColor: Colors.white, // 🔒 <- keep text white
+                  disabledBackgroundColor: Colors.red,
+                  disabledForegroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   shape: RoundedRectangleBorder(
@@ -197,7 +238,7 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    if (_loading || _imageGenerating)
+                    if (_loading && !_imageGenerating)
                       const SizedBox(
                         width: 18,
                         height: 18,
@@ -206,10 +247,10 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
                           color: Colors.white,
                         ),
                       ),
-                    if (_loading || _imageGenerating) const SizedBox(width: 8),
+                    if (_loading && !_imageGenerating) const SizedBox(width: 8),
                     Text(
                       _imageGenerating
-                          ? "Generating..."
+                          ? "Generating Image"
                           : _loading
                               ? "Analyzing..."
                               : "Analyze",
@@ -219,6 +260,26 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
               ),
             ),
             const SizedBox(width: 8), // gap between buttons
+
+            // Draft / Save Button
+        //     SizedBox(
+        //       width: 100,
+        //       child: ElevatedButton(
+        //         style: ElevatedButton.styleFrom(
+        //           backgroundColor: AppColors.purple600,
+        //           foregroundColor: Colors.white,
+        //           disabledBackgroundColor: Colors.red,
+        //           disabledForegroundColor: Colors.white,
+        //           padding: const EdgeInsets.symmetric(vertical: 12),
+        //           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        //           shape: RoundedRectangleBorder(
+        //             borderRadius: BorderRadius.circular(10),
+        //           ),
+        //         ),
+        //         onPressed: (_loading || _imageGenerating) ? null : _saveDraft,
+        //         child: const Text("Save Draft"),
+        //       ),
+        //     ),
           ],
         ),
 
