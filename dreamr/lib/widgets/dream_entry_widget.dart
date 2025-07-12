@@ -44,7 +44,7 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
       await _player.play();
     } catch (e) {
       // Handle error if needed
-      print('🔈 Failed to play intro audio: $e');
+      // print('🔈 Failed to play intro audio: $e');
     }
   }
 
