@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:dreamr/widgets/dream_journal_widget.dart';
-// import 'package:dreamr/widgets/main_scaffold.dart';
-// import 'package:table_calendar/table_calendar.dart';
 import 'package:dreamr/constants.dart';
 
 
@@ -21,15 +19,14 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
   // List<Dream> _allDreams = [];
   // Set<DateTime> _dreamDates = {};
 
-  final ScrollController _scrollController = ScrollController();
-  void _scrollToTop() {
-    // print('📢 Scroll attempt: offset = ${_scrollController.offset}');
-    _scrollController.animateTo(
-      0.0,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
-  }
+  // final ScrollController _scrollController = ScrollController();
+  // void _scrollToTop() {
+  //   _scrollController.animateTo(
+  //     0.0,
+  //     duration: const Duration(milliseconds: 300),
+  //     curve: Curves.easeOut,
+  //   );
+  // }
 
   @override
   void initState() {
@@ -108,7 +105,7 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
         _loadStats();
       },
       child: SingleChildScrollView(
-        controller: _scrollController,
+        // controller: _scrollController,
         padding: const EdgeInsets.all(4),
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(

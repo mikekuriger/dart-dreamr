@@ -4,6 +4,8 @@ import 'package:dreamr/theme/colors.dart';
 import 'package:dreamr/constants.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:flutter/services.dart';
 
 
 class DreamEntryWidget extends StatefulWidget {
@@ -29,6 +31,38 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
   String? _message;
   String? _userName;
   String? _dreamImagePath;
+  final AudioPlayer _player = AudioPlayer();
+  bool _hasPlayedIntroAudio = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _playIntroAudioOnce());
+    _loadDraftText();
+    widget.refreshTrigger.addListener(_refreshFromTrigger);
+    _loadUserName();
+  }
+
+  Future<void> _playIntroAudioOnce() async {
+    if (_hasPlayedIntroAudio) return;
+    _hasPlayedIntroAudio = true;
+
+    try {
+      await _player.setAsset('assets/sound/tell_me_about.mp3');
+      await _player.play();
+    } catch (e) {
+      // Handle error if needed
+      print('🔈 Failed to play intro audio: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    widget.refreshTrigger.removeListener(_refreshFromTrigger);
+    super.dispose();
+  }
+
 
   void _refreshFromTrigger() async {
     final prefs = await SharedPreferences.getInstance();
