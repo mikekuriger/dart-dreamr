@@ -5,7 +5,7 @@ import 'package:dreamr/constants.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:flutter/services.dart';
+// import 'package:flutter/services.dart';
 
 
 class DreamEntryWidget extends StatefulWidget {
@@ -34,14 +34,6 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
   final AudioPlayer _player = AudioPlayer();
   bool _hasPlayedIntroAudio = false;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _playIntroAudioOnce());
-    _loadDraftText();
-    widget.refreshTrigger.addListener(_refreshFromTrigger);
-    _loadUserName();
-  }
 
   Future<void> _playIntroAudioOnce() async {
     if (_hasPlayedIntroAudio) return;
@@ -54,13 +46,6 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
       // Handle error if needed
       print('🔈 Failed to play intro audio: $e');
     }
-  }
-
-  @override
-  void dispose() {
-    _player.dispose();
-    widget.refreshTrigger.removeListener(_refreshFromTrigger);
-    super.dispose();
   }
 
 
@@ -154,10 +139,11 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
 
   @override
   void dispose() {
+    _player.dispose();
     widget.refreshTrigger.removeListener(_refreshFromTrigger);
     super.dispose();
   }
-  
+
   @override
   void initState() {
     super.initState();
@@ -171,6 +157,9 @@ class _DreamEntryWidgetState extends State<DreamEntryWidget> {
 
     widget.refreshTrigger.addListener(_refreshFromTrigger);
     _loadUserName();
+
+    // 🔊 Play intro audio once
+    _playIntroAudioOnce();
   }
 
   void _loadDraftText() async {
