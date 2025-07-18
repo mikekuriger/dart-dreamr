@@ -21,6 +21,7 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   late int _selectedIndex;
   late final List<Widget> _views;
+  bool _navEnabled = true;
 
   Widget _getTitleForIndex(int index) {
     String title;
@@ -76,7 +77,15 @@ class _MainScaffoldState extends State<MainScaffold> {
     super.initState();
     _selectedIndex = widget.initialIndex;
     _views = [
-      DashboardScreen(refreshTrigger: dreamEntryRefreshTrigger), // index 0
+      // DashboardScreen(refreshTrigger: dreamEntryRefreshTrigger), // index 0
+      DashboardScreen(
+        refreshTrigger: dreamEntryRefreshTrigger,
+        onAnalyzingChange: (bool analyzing) {
+          setState(() {
+            _navEnabled = !analyzing;
+          });
+        },
+      ),
       DreamJournalScreen(refreshTrigger: journalRefreshTrigger), // index 1
       DreamGalleryScreen(refreshTrigger: galleryRefreshTrigger), // index 2
       // HelpScreen(refreshTrigger: profileRefreshTrigger), // index 3
@@ -180,61 +189,32 @@ class _MainScaffoldState extends State<MainScaffold> {
         index: _selectedIndex,
         children: _views,
       ),
-      bottomNavigationBar: _selectedIndex == 4
-        ? null // ✅ hide nav on profile page
-        : BottomNavigationBar(
-            currentIndex: (_selectedIndex == 3) ? 1 : _selectedIndex.clamp(0, 2),
-            onTap: _onBottomNavTapped,
-            selectedItemColor: Colors.white,
-            unselectedItemColor: Colors.white70,
-            backgroundColor: AppColors.purple950,
-            type: BottomNavigationBarType.fixed,
-            showUnselectedLabels: false,
-            showSelectedLabels: true,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.add_box),
-                label: 'New Dream',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.menu_book),
-                label: 'Journal',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.photo),
-                label: 'Gallery',
-              ),
-            ],
+      bottomNavigationBar: (_selectedIndex == 4 || !_navEnabled)
+    ? null // hide nav on profile page OR when analyzing
+    : BottomNavigationBar(
+        currentIndex: (_selectedIndex == 3) ? 1 : _selectedIndex.clamp(0, 2),
+        onTap: _onBottomNavTapped,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white70,
+        backgroundColor: AppColors.purple950,
+        type: BottomNavigationBarType.fixed,
+        showUnselectedLabels: false,
+        showSelectedLabels: true,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add_box),
+            label: 'New Dream',
           ),
-      // bottomNavigationBar: BottomNavigationBar(
-      //   currentIndex: _selectedIndex > 2 ? 1 : _selectedIndex,
-      //   // currentIndex: (_selectedIndex == 3) ? 1 : _selectedIndex.clamp(0, 2),
-      //   onTap: _onBottomNavTapped,
-      //   selectedItemColor: Colors.white,
-      //   unselectedItemColor: Colors.white70,
-      //   backgroundColor: AppColors.purple950, // 👈 match AppBar
-      //   type: BottomNavigationBarType.fixed, // 👈 important to keep background color
-      //   showUnselectedLabels: false, // 👈 hide labels for unselected
-      //   showSelectedLabels: true,    // 👈 only show selected label
-      //   items: const [
-      //     BottomNavigationBarItem(
-      //       icon: Icon(Icons.add_box),
-      //       label: 'New Dream',
-      //     ),
-      //     BottomNavigationBarItem(
-      //       icon: Icon(Icons.menu_book),
-      //       label: 'Journal',
-      //     ),
-      //     BottomNavigationBarItem(
-      //       icon: Icon(Icons.photo),
-      //       label: 'Gallery',
-      //     ),
-      //     // BottomNavigationBarItem(
-      //     //   icon: Icon(Icons.help),
-      //     //   label: 'Help',
-      //     // ),
-      //   ],
-      // ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.menu_book),
+            label: 'Journal',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.photo),
+            label: 'Gallery',
+          ),
+        ],
+      ),
     );
   }
 }
