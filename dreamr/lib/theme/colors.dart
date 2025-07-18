@@ -9,5 +9,6 @@ class AppColors {
   static const purple850 = Color.fromARGB(255, 71, 4, 131);
   static const purple900 = Color.fromARGB(255, 51, 0, 95);
   static const purple950 = Color.fromARGB(255, 25, 0, 48);
+  static const background = Color.fromARGB(255, 24, 2, 62);
   static const black = Color(0xFF000000);
 }

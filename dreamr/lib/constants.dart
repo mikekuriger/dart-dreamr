@@ -7,6 +7,7 @@ final ValueNotifier<int> journalRefreshTrigger = ValueNotifier(0);
 final ValueNotifier<int> galleryRefreshTrigger = ValueNotifier(0);
 final ValueNotifier<int> profileRefreshTrigger = ValueNotifier(0);
 final ValueNotifier<int> dreamEntryRefreshTrigger = ValueNotifier(0);
+final ValueNotifier<int> editorRefreshTrigger = ValueNotifier(0);
 
 
 class AppConfig {

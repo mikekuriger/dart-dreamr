@@ -27,6 +27,34 @@ class Dream {
     this.imageTile,
   });
 
+  Dream copyWith({
+    int? id,
+    int? userId,
+    String? text,
+    String? analysis,
+    String? summary,
+    String? tone,
+    String? imagePrompt,
+    bool? hidden,
+    DateTime? createdAt,
+    String? imageFile,
+    String? imageTile,
+  }) {
+    return Dream(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      text: text ?? this.text,
+      analysis: analysis ?? this.analysis,
+      summary: summary ?? this.summary,
+      tone: tone ?? this.tone,
+      imagePrompt: imagePrompt ?? this.imagePrompt,
+      hidden: hidden ?? this.hidden,
+      createdAt: createdAt ?? this.createdAt,
+      imageFile: imageFile ?? this.imageFile,
+      imageTile: imageTile ?? this.imageTile,
+    );
+  }
+
   factory Dream.fromJson(Map<String, dynamic> json) {
     return Dream(
       id: json['id'] ?? 0,
@@ -48,4 +76,45 @@ class Dream {
   }
 }
 
+class User {
+  String email;
+  String? firstName;
+  String? birthdate;
+  String? gender;
+  String? timezone;
+  String? avatarUrl;
+  bool muteAudio;
 
+  User({
+    required this.email,
+    this.firstName,
+    this.birthdate,
+    this.gender,
+    this.timezone,
+    this.avatarUrl,
+    this.muteAudio = false,
+  });
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      email: json['email'],
+      firstName: json['first_name'],
+      birthdate: json['birthdate'],
+      gender: json['gender'],
+      timezone: json['timezone'],
+      avatarUrl: json['avatar_url'],
+      muteAudio: json['mute_audio'] == true || json['mute_audio'] == 1,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'email': email,
+      'firstName': firstName,
+      'birthdate': birthdate,
+      'gender': gender,
+      'timezone': timezone,
+      'mute_audio': muteAudio ? 1 : 0,
+    };
+  }
+}

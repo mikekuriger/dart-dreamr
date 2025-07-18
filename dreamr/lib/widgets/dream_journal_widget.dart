@@ -97,77 +97,6 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: _dreams.length,
-
-        // this code prints the dreams with no "bubble"
-        // itemBuilder: (context, index) {
-        //   final dream = _dreams[index];
-        //   final isExpanded = _expanded[dream.id] ?? false;
-        //   final formattedDate = DateFormat.yMMMd().add_jm().format(dream.createdAt.toLocal());
-
-        //   return Column(
-        //     crossAxisAlignment: CrossAxisAlignment.start,
-        //     children: [
-        //       GestureDetector(
-        //         onTap: () {
-        //           setState(() {
-        //             _expanded[dream.id] = !isExpanded;
-        //           });
-        //         },
-        //         child: Padding(
-        //           padding: const EdgeInsets.symmetric(vertical: 6.0),
-        //           child: Column(
-        //             crossAxisAlignment: CrossAxisAlignment.start,
-        //             children: [
-        //               Text(
-        //                 formattedDate,
-        //                 style: const TextStyle(fontSize: 12, color: Colors.grey),
-        //               ),
-        //               Text(
-        //                 dream.summary,
-        //                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-        //               ),
-        //             ],
-        //           ),
-        //         ),
-        //       ),
-        //       if (isExpanded)
-        //         Padding(
-        //           padding: const EdgeInsets.only(bottom: 12.0),
-        //           child: Column(
-        //             crossAxisAlignment: CrossAxisAlignment.start,
-        //             children: [
-        //               if (dream.text.isNotEmpty)
-        //                 Padding(
-        //                   padding: const EdgeInsets.only(top: 4),
-        //                   child: Text(
-        //                     dream.text,
-        //                     style: const TextStyle(
-        //                       fontSize: 13,
-        //                       fontStyle: FontStyle.italic,
-        //                     ),
-        //                   ),
-        //                 ),
-        //               if (dream.analysis.isNotEmpty)
-        //                 Padding(
-        //                   padding: const EdgeInsets.only(top: 6),
-        //                   child: MarkdownBody(data: dream.analysis),
-        //                 ),
-        //               if (dream.imageFile != null && dream.imageFile!.isNotEmpty)
-        //                 Padding(
-        //                   padding: const EdgeInsets.only(top: 6),
-        //                   child: Image.network(
-        //                     dream.imageFile!,
-        //                     errorBuilder: (context, error, stackTrace) =>
-        //                         const Text("⚠️ Failed to load image."),
-        //                   ),
-        //                 ),
-        //             ],
-        //           ),
-        //         ),
-        //     ],
-        //   );
-        // }
-
         itemBuilder: (context, index) {
           final dream = _dreams[index];
           final isExpanded = _expanded[dream.id] ?? false;
@@ -235,7 +164,7 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
                             ],
                           ),
                         ),
-                        Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
+                        // Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
                       ],
                     ),
                   ),
@@ -245,10 +174,22 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (dream.text.isNotEmpty) ...[
-                          Text(dream.text,
+                          // SelectableText(dream.text,
+                          //     style: TextStyle(
+                          //         fontSize: 12, fontStyle: FontStyle.italic,color: toneStyle.text,
+                          //     )
+                          // ),
+                          SelectableRegion(
+                            focusNode: FocusNode(),
+                            selectionControls: MaterialTextSelectionControls(),
+                            child: Text(
+                              dream.text,
                               style: TextStyle(
-                                  fontSize: 12, fontStyle: FontStyle.italic,color: toneStyle.text,)),
-                          const SizedBox(height: 6),
+                                  fontSize: 13, fontStyle: FontStyle.italic,color: toneStyle.text,
+                              )
+                            ),
+                          ),
+                          const SizedBox(height: 10),
                         ],
                         if (dream.analysis.isNotEmpty) ...[
                           Text("Analysis:",

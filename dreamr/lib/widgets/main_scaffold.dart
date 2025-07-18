@@ -1,11 +1,12 @@
+// import 'package:dreamr/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:dreamr/theme/colors.dart';
 import 'package:dreamr/screens/dashboard_screen.dart';
 import 'package:dreamr/screens/dream_journal_screen.dart';
+import 'package:dreamr/screens/dream_journal_editor_screen.dart';
 import 'package:dreamr/screens/dream_gallery_screen.dart';
-// import 'package:dreamr/screens/profile_screen.dart';
+import 'package:dreamr/screens/profile_screen.dart';
 import 'package:dreamr/constants.dart';
-
 
 
 class MainScaffold extends StatefulWidget {
@@ -33,7 +34,13 @@ class _MainScaffoldState extends State<MainScaffold> {
       case 2:
         title = "Dreamr ✨ Gallery";
         break;
+      // case 3:
+      //   title = "Dreamr ✨ Help";
+      //   break;
       case 3:
+        title = "Dreamr ✨ Manage Journal";
+        break;
+      case 4:
         title = "Dreamr ✨ Profile";
         break;
       default:
@@ -64,21 +71,32 @@ class _MainScaffoldState extends State<MainScaffold> {
     );
   }
 
-
-
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
     _views = [
-      DashboardScreen(refreshTrigger: dreamEntryRefreshTrigger),
-      DreamJournalScreen(refreshTrigger: journalRefreshTrigger),
-      DreamGalleryScreen(refreshTrigger: galleryRefreshTrigger),
-      //ProfileScreen(refreshTrigger: profileRefreshTrigger),
+      DashboardScreen(refreshTrigger: dreamEntryRefreshTrigger), // index 0
+      DreamJournalScreen(refreshTrigger: journalRefreshTrigger), // index 1
+      DreamGalleryScreen(refreshTrigger: galleryRefreshTrigger), // index 2
+      // HelpScreen(refreshTrigger: profileRefreshTrigger), // index 3
+      DreamJournalEditorScreen(refreshTrigger: editorRefreshTrigger), // index 3
+      ProfileScreen(
+        refreshTrigger: profileRefreshTrigger,
+        onDone: () {
+          setState(() {
+            _selectedIndex = 1; 
+          });
+          // _loadUserName(); 
+        },
+      ),
     ];
   }
 
   void _onBottomNavTapped(int index) {
+    // force close keyboard
+    FocusScope.of(context).unfocus();
+
     // Trigger refresh logic based on index
     switch (index) {
       case 0:
@@ -90,7 +108,13 @@ class _MainScaffoldState extends State<MainScaffold> {
       case 2:
         galleryRefreshTrigger.value++;
         break;
+      // case 3:
+      //   helpRefreshTrigger.value++;
+      //   break;
       case 3:
+        editorRefreshTrigger.value++;
+        break;
+      case 4:
         profileRefreshTrigger.value++;
         break;
     }
@@ -100,11 +124,6 @@ class _MainScaffoldState extends State<MainScaffold> {
     });
   }
 
-  // void _onBottomNavTapped(int index) {
-  //   setState(() {
-  //     _selectedIndex = index;
-  //   });
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -115,51 +134,42 @@ class _MainScaffoldState extends State<MainScaffold> {
         automaticallyImplyLeading: false,
         title: _getTitleForIndex(_selectedIndex),
         actions: [
-          // IconButton(
-          //   icon: const Icon(Icons.home, color: Colors.white),
-          //   onPressed: () {
-          //     final routeName = ModalRoute.of(context)?.settings.name;
-          //     if (routeName == '/journal') {
-          //     } else {
-          //       Navigator.pushReplacement(
-          //         context,
-          //         MaterialPageRoute(builder: (context) => const MainScaffold(initialIndex: 1)),
-          //       );
-          //     }
-          //   },
-          //   tooltip: 'Home',
-          // ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu, color: Colors.white),
-            color: AppColors.purple900,
+            color: AppColors.purple950,
             onSelected: (String route) {
-              if (route == '/login') {
-                Navigator.pushNamedAndRemoveUntil(
-                    context, '/login', (route) => false);
-              } else {
-                Navigator.pushNamed(context, route);
+              // ✅ force keyboard to close when selecting from menu
+              FocusScope.of(context).unfocus();
+              
+              switch (route) {
+                case '/editor':
+                  setState(() {
+                    editorRefreshTrigger.value++;
+                    _selectedIndex = 3; 
+                  });
+                  break;
+                case '/profile':
+                  setState(() {
+                    _selectedIndex = 4; 
+                  });
+                  break;
+                case '/login':
+                  Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                  break;
               }
             },
             itemBuilder: (BuildContext context) => [
-              // const PopupMenuItem(
-              //   value: '/journal',
-              //   child: Text('Dream Journal', style: TextStyle(color: Colors.white)),
-              // ),
-              // const PopupMenuItem(
-              //   value: '/gallery',
-              //   child: Text('Dream Gallery', style: TextStyle(color: Colors.white)),
-              // ),
-              // const PopupMenuItem(
-              //   value: '/dashboard',
-              //   child: Text('Manage Journal', style: TextStyle(color: Colors.white)),
-              // ),
-              // const PopupMenuItem(
-              //   value: '/profile',
-              //   child: Text('Edit Profile', style: TextStyle(color: Colors.white)),
-              // ),
               const PopupMenuItem(
                 value: '/login',
                 child: Text('Logout', style: TextStyle(color: Colors.white)),
+              ),
+              const PopupMenuItem(
+                value: '/profile',
+                child: Text('Profile', style: TextStyle(color: Colors.white)),
+              ),
+              const PopupMenuItem(
+                value: '/editor',
+                child: Text('Hide/Delete', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -170,34 +180,61 @@ class _MainScaffoldState extends State<MainScaffold> {
         index: _selectedIndex,
         children: _views,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onBottomNavTapped,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        backgroundColor: AppColors.purple950, // 👈 match AppBar
-        type: BottomNavigationBarType.fixed, // 👈 important to keep background color
-        showUnselectedLabels: false, // 👈 hide labels for unselected
-        showSelectedLabels: true,    // 👈 only show selected label
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.edit),
-            label: 'Enter Dream',
+      bottomNavigationBar: _selectedIndex == 4
+        ? null // ✅ hide nav on profile page
+        : BottomNavigationBar(
+            currentIndex: (_selectedIndex == 3) ? 1 : _selectedIndex.clamp(0, 2),
+            onTap: _onBottomNavTapped,
+            selectedItemColor: Colors.white,
+            unselectedItemColor: Colors.white70,
+            backgroundColor: AppColors.purple950,
+            type: BottomNavigationBarType.fixed,
+            showUnselectedLabels: false,
+            showSelectedLabels: true,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.add_box),
+                label: 'New Dream',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.menu_book),
+                label: 'Journal',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.photo),
+                label: 'Gallery',
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.menu_book),
-            label: 'Journal',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.photo),
-            label: 'Gallery',
-          ),
-          // BottomNavigationBarItem(
-          //   icon: Icon(Icons.person),
-          //   label: 'Profile',
-          // ),
-        ],
-      ),
+      // bottomNavigationBar: BottomNavigationBar(
+      //   currentIndex: _selectedIndex > 2 ? 1 : _selectedIndex,
+      //   // currentIndex: (_selectedIndex == 3) ? 1 : _selectedIndex.clamp(0, 2),
+      //   onTap: _onBottomNavTapped,
+      //   selectedItemColor: Colors.white,
+      //   unselectedItemColor: Colors.white70,
+      //   backgroundColor: AppColors.purple950, // 👈 match AppBar
+      //   type: BottomNavigationBarType.fixed, // 👈 important to keep background color
+      //   showUnselectedLabels: false, // 👈 hide labels for unselected
+      //   showSelectedLabels: true,    // 👈 only show selected label
+      //   items: const [
+      //     BottomNavigationBarItem(
+      //       icon: Icon(Icons.add_box),
+      //       label: 'New Dream',
+      //     ),
+      //     BottomNavigationBarItem(
+      //       icon: Icon(Icons.menu_book),
+      //       label: 'Journal',
+      //     ),
+      //     BottomNavigationBarItem(
+      //       icon: Icon(Icons.photo),
+      //       label: 'Gallery',
+      //     ),
+      //     // BottomNavigationBarItem(
+      //     //   icon: Icon(Icons.help),
+      //     //   label: 'Help',
+      //     // ),
+      //   ],
+      // ),
     );
   }
 }

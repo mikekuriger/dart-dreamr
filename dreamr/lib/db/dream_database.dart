@@ -59,10 +59,16 @@ class DreamDatabase {
   Future<Database> _initDb() async {
     Directory docsDir = await getApplicationDocumentsDirectory();
     String path = join(docsDir.path, 'dreams.db');
+
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // Incremented version
       onCreate: _onCreate,
+      onUpgrade: (Database db, int oldVersion, int newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('ALTER TABLE dreams ADD COLUMN dream_type TEXT');
+        }
+      },
     );
   }
 
@@ -77,7 +83,10 @@ class DreamDatabase {
         image_pending INTEGER
       )
     ''');
+
+    await db.execute('CREATE INDEX idx_created_at ON dreams(created_at)');
   }
+
 
   Future<void> insertOrUpdateDream(Dream dream) async {
     final db = await database;

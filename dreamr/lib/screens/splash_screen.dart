@@ -21,53 +21,61 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _attemptAutoLogin() async {
-    final loginMethod = await _storage.read(key: 'login_method');
+    try {
+      final loginMethod = await _storage.read(key: 'login_method');
 
-    if (loginMethod == 'google') {
-      try {
-        final googleUser = await GoogleSignIn().signInSilently();
+      if (loginMethod == 'google') {
+        try {
+          final googleUser = await GoogleSignIn().signInSilently();
 
-        if (googleUser != null) {
-          final auth = await googleUser.authentication;
-          final idToken = auth.idToken;
+          if (googleUser != null) {
+            final auth = await googleUser.authentication;
+            final idToken = auth.idToken;
 
-          if (idToken != null) {
-            await ApiService.googleLogin(idToken);
+            if (idToken != null) {
+              await ApiService.googleLogin(idToken);
 
-            if (!mounted) return;
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const MainScaffold()),
-            );
-            return;
+              if (!mounted) return;
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const MainScaffold()),
+              );
+              return;
+            }
           }
+        } catch (e) {
+          // ignore and fall back to manual login
         }
-      } catch (e) {
-        // ignore and fall back to manual login
       }
-    }
 
-    final email = await _storage.read(key: 'email');
-    final password = await _storage.read(key: 'password');
-    if (email != null && password != null) {
-      try {
-        await ApiService.login(email, password);
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainScaffold()),
-        );
-        return;
-      } catch (e) {
-        // Login failed, fall through to login screen
+      final email = await _storage.read(key: 'email');
+      final password = await _storage.read(key: 'password');
+      if (email != null && password != null) {
+        try {
+          await ApiService.login(email, password);
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainScaffold()),
+          );
+          return;
+        } catch (e) {
+          // Login failed, fall through to login screen
+        }
       }
-    }
 
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } catch (e) {
+      // 🔥 this catches BAD_DECRYPT or any other secure storage read failure
+      debugPrint('❌ Secure storage error: $e');
+      await _storage.deleteAll(); // wipe corrupted entries
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
