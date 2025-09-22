@@ -1,3 +1,5 @@
+// screens/dream_journal_screen.dart
+import 'package:dreamr/theme/colors.dart' show AppColors;
 import 'package:dreamr/widgets/main_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:dreamr/widgets/dream_journal_widget.dart';
@@ -175,7 +177,8 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.deepPurple.shade600,
+                    // color: const Color.fromARGB(255, 20, 0, 68),
+                    color: AppColors.purple850,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -289,7 +292,7 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                                       ],
                                     ),
                                   );
-                                }).toList(),
+                                }),
                               ],
 
                               const SizedBox(height: 10),

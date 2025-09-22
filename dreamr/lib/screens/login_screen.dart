@@ -1,3 +1,4 @@
+// screens/login_screen.dart
 import 'package:dreamr/widgets/main_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:dreamr/services/api_service.dart';
@@ -6,13 +7,14 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dreamr/constants.dart';
 
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
@@ -24,47 +26,58 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    serverClientId: '846080686597-61d3v0687vomt4g4tl7rueu7rv9qrari.apps.googleusercontent.com',
+    serverClientId: kWebClientId,
   );
   
+
   Future<void> _handleGoogleLogin() async {
+  try {
+    debugPrint('GS: starting signIn');
+    final account = await _googleSignIn.signIn();
+    if (account == null) {
+      debugPrint('GS: cancelled by user');
+      setState(() => _errorMessage = "Login cancelled");
+      return;
+    }
+    debugPrint('GS: account=${account.email}');
+
+    final auth = await account.authentication;
+    final hasIdToken = auth.idToken != null && auth.idToken!.isNotEmpty;
+    debugPrint('GS: idToken? $hasIdToken');
+
+    if (!hasIdToken) {
+      setState(() => _errorMessage = "Google authentication failed (no token)");
+      return;
+    }
+
+    // Call your backend
     try {
-      final account = await _googleSignIn.signIn();
-      final storage = FlutterSecureStorage();
-      await storage.write(key: 'login_method', value: 'google');
-      // await storage.write(key: 'email', value: user.email);
-
-      if (account == null) {
-        setState(() {
-          _errorMessage = "Login cancelled";
-        });
-        return;
-      }
-
-      final auth = await account.authentication;
-      final idToken = auth.idToken;
-
-      if (idToken == null) {
-        setState(() {
-          _errorMessage = "Google authentication failed";
-        });
-        return;
-      }
-
-      await ApiService.googleLogin(idToken);
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainScaffold(initialIndex: 1)),
-      );
+      debugPrint('GS: calling backend /api/google_login');
+      await ApiService.googleLogin(auth.idToken!);
+      debugPrint('GS: backend OK');
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = "Google login failed";
-        });
-      }
+      debugPrint('GS: backend FAIL $e');
+      setState(() => _errorMessage = "Backend login failed");
+      return;
+    }
+
+    // Persist login method (your existing code)
+    final storage = FlutterSecureStorage();
+    await storage.write(key: 'login_method', value: 'google');
+
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const MainScaffold(initialIndex: 1)),
+    );
+  } catch (e) {
+    debugPrint('GS: unexpected error $e');
+    if (mounted) {
+      setState(() => _errorMessage = "Google login failed");
     }
   }
+}
+
 
   Future<void> _handleLogin() async {
     final email = _emailController.text.trim();

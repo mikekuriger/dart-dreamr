@@ -1,3 +1,4 @@
+// services/api_service.dart
 import 'dart:convert';
 import 'package:dreamr/models/dream.dart';
 import 'dio_client.dart';
@@ -74,6 +75,18 @@ class ApiService {
     if (response.statusCode != 200) {
       throw Exception('Google login failed');
     }
+  }
+
+
+  static Future<void> logout() async {
+    // (Optional) tell the server to invalidate the session
+    try { await DioClient.dio.post('/api/logout'); } catch (_) {}
+
+    // Clear any persisted cookies
+    await DioClient.clearCookies();
+
+    // Optionally clear any auth headers you might set
+    DioClient.dio.options.headers.remove('Authorization');
   }
 
   // Fetch dream journal (hidden = false)

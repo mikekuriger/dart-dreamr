@@ -1,14 +1,16 @@
+// screens/register_screen.dart
 import 'package:flutter/material.dart';
 import 'package:dreamr/services/api_service.dart';
 import 'package:dreamr/theme/colors.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:dreamr/constants.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({Key? key}) : super(key: key);
+  const RegisterScreen({super.key});
 
   @override
-  _RegisterScreenState createState() => _RegisterScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState(); 
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
@@ -19,7 +21,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    serverClientId: '846080686597-61d3v0687vomt4g4tl7rueu7rv9qrari.apps.googleusercontent.com',
+    serverClientId: kWebClientId,
   );
   
   Future<void> _handleGoogleLogin() async {

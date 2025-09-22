@@ -1,3 +1,4 @@
+// widgets/dream_journal_widget.dart
 import 'package:flutter/material.dart';
 import 'package:dreamr/models/dream.dart';
 import 'package:dreamr/services/api_service.dart';
@@ -28,7 +29,7 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
   List<Dream> _dreams = [];
   List<Dream> getDreams() => _dreams;
 
-  Map<int, bool> _expanded = {};
+  final Map<int, bool> _expanded = {};
   bool _loading = true;
 
   @override

@@ -1,3 +1,4 @@
+// widgets/main_scaffold.dart
 // import 'package:dreamr/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:dreamr/theme/colors.dart';
@@ -7,6 +8,7 @@ import 'package:dreamr/screens/dream_journal_editor_screen.dart';
 import 'package:dreamr/screens/dream_gallery_screen.dart';
 import 'package:dreamr/screens/profile_screen.dart';
 import 'package:dreamr/constants.dart';
+import 'package:dreamr/utils/session_manager.dart';
 
 
 class MainScaffold extends StatefulWidget {
@@ -146,7 +148,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu, color: Colors.white),
             color: AppColors.purple950,
-            onSelected: (String route) {
+            onSelected: (String route) async {
               // ✅ force keyboard to close when selecting from menu
               FocusScope.of(context).unfocus();
               
@@ -165,11 +167,14 @@ class _MainScaffoldState extends State<MainScaffold> {
                 case '/login':
                   Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
                   break;
+                case 'logout':
+                  await performLogout(context);
+                  break;
               }
             },
             itemBuilder: (BuildContext context) => [
               const PopupMenuItem(
-                value: '/login',
+                value: 'logout',
                 child: Text('Logout', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(

@@ -1,3 +1,4 @@
+// screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:dreamr/theme/colors.dart';
 import 'package:dreamr/services/api_service.dart';
@@ -86,7 +87,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.05),
+      fillColor: Colors.white.withValues(alpha:0.05),
     );
   }
 
@@ -130,7 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
+                          color: Colors.black.withValues(alpha:0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
