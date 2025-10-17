@@ -46,3 +46,8 @@ app.*.map.json
 b
 build
 *copy.dart
+
+# Flutter platforms
+macos/
+google_client_ID
+google_client_ID-release
