@@ -9,6 +9,7 @@ import 'package:dreamr/screens/dashboard_screen.dart';
 import 'package:dreamr/screens/dream_journal_screen.dart';
 import 'package:dreamr/screens/dream_journal_editor_screen.dart';
 import 'package:dreamr/screens/dream_gallery_screen.dart';
+import 'package:dreamr/screens/forgot_password_screen.dart';
 import 'package:dreamr/screens/profile_screen.dart';
 
 import 'package:dreamr/services/dio_client.dart';
@@ -57,6 +58,7 @@ class DreamrApp extends StatelessWidget {
         '/gallery': (context) => DreamGalleryScreen(refreshTrigger: galleryRefreshTrigger),
         '/image': (context) => const Placeholder(),
         '/profile': (context) => ProfileScreen(refreshTrigger: profileRefreshTrigger),
+        '/forgot-password': (_) => const ForgotPasswordScreen(),
       },
     );
   }
