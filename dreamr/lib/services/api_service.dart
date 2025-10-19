@@ -25,6 +25,32 @@ void initDio(Dio dio) {
   }
 }
 
+// ---- Notes support (top-level) ----
+class NotesConflict implements Exception {
+  final Map<String, dynamic> current; // { id, notes, notes_updated_at }
+  NotesConflict(this.current);
+}
+
+class NotesTooLarge implements Exception {
+  const NotesTooLarge();
+}
+
+class NotesHttp implements Exception {
+  final String message;
+  final int? status;
+  final dynamic body;
+  const NotesHttp(this.message, this.status, this.body);
+  @override
+  String toString() => 'NotesHttp($status): $message';
+}
+
+
+Map<String, dynamic> _ensureMap(dynamic v, String when, int? status) {
+  if (v is Map) return Map<String, dynamic>.from(v);
+  throw NotesHttp('Unexpected payload for $when', status, v);
+}
+
+
 class ApiService {
 
   // Register using email + password
@@ -215,9 +241,21 @@ class ApiService {
   }
 
   // Fetch dream journal (hidden = false)
-  // static Future<List<Dream>> fetchDreams({required bool forceRefresh}) async {
   static Future<List<Dream>> fetchDreams() async {
     final response = await DioClient.dio.get('/api/dreams');
+
+    if (response.statusCode == 200) {
+      final List data = response.data;
+      return data.map((json) => Dream.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to fetch dreams: ${response.statusMessage}');
+    }
+  }
+
+  // Fetch dreams for Gallery
+  static Future<List<Dream>> fetchGallery() async {
+    final response = await DioClient.dio.get('/api/gallery');
+    // final response = await DioClient.dio.get('/api/dreams');
 
     if (response.statusCode == 200) {
       final List data = response.data;
@@ -273,6 +311,8 @@ class ApiService {
         'analysis': data['analysis'] ?? '',
         'tone': data['tone'] ?? '',
         'dream_id': (data['dream_id'] ?? '').toString(),
+        'is_question': data['is_question'] == true,
+        'should_generate_image': data['should_generate_image'] == true,
       };
     } else {
       throw Exception('Dream submission failed: ${response.statusMessage}');
@@ -360,6 +400,67 @@ class ApiService {
       rethrow;
     }
   }
+
+  // === Notes APIs ===
+
+  /// GET /api/dreams/:id/notes
+  /// Returns: { id, notes, notes_updated_at }
+  static Future<Map<String, dynamic>> getDreamNotes(int dreamId) async {
+    final res = await DioClient.dio.get(
+      '/api/dreams/$dreamId/notes',
+      options: Options(validateStatus: (_) => true),
+    );
+
+    final code = res.statusCode ?? 0;
+
+    if (code == 200) {
+      return _ensureMap(res.data, 'notes GET', code);
+    }
+    if (code == 401 || code == 403) {
+      throw NotesHttp('Not authenticated', code, res.data);
+    }
+    throw NotesHttp('Notes fetch failed', code, res.data);
+  }
+
+  /// PATCH /api/dreams/:id/notes
+  /// Pass `lastSeen` (ISO) for conflict detection; set `notes: null` to clear.
+  /// Returns: { id, notes, notes_updated_at }
+  static Future<Map<String, dynamic>> saveDreamNotes({
+    required int dreamId,
+    required String? notes,
+    String? lastSeen,
+  }) async {
+    final body = <String, dynamic>{'notes': notes};
+    if (lastSeen != null) {
+      body['last_seen_notes_updated_at'] = lastSeen;
+    }
+
+    final res = await DioClient.dio.patch(
+      '/api/dreams/$dreamId/notes',
+      data: body,
+      options: Options(validateStatus: (_) => true),
+    );
+
+    final code = res.statusCode ?? 0;
+
+    if (code == 200) {
+      return _ensureMap(res.data, 'notes PATCH', code);
+    }
+    if (code == 409) {
+      final m = _ensureMap(res.data, 'notes conflict', code);
+      final cur = _ensureMap(m['current'], 'notes conflict.current', code);
+      throw NotesConflict(cur);
+    }
+    if (code == 413) {
+      throw const NotesTooLarge();
+    }
+    if (code == 401 || code == 403) {
+      throw NotesHttp('Not authenticated', code, res.data);
+    }
+    throw NotesHttp('Notes save failed', code, res.data);
+  }
+
+
 
   // — helpers —
   static String _absoluteUrl(String maybe) {
