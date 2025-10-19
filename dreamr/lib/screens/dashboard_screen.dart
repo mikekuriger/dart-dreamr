@@ -1,3 +1,4 @@
+// screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -129,15 +130,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final result = await ApiService.submitDream(text);
       final analysis = result['analysis'] as String;
-      final tone = result['tone'] as String;
       final dreamId = int.parse(result['dream_id'].toString());
 
+      // 👇 Single source of truth for behavior
+      // final shouldGen   = result['should_generate_image'] == true;
+      final shouldGen = (result['should_generate_image'] as bool?) ?? false;
+      final isQuestion  = result['is_question'] == true; // optional: for copy/UX only
+      final String? tone = (result['tone'] is String) ? (result['tone'] as String).trim() : null;
+      final String? placeholderUrl = result['image_url'] as String?;
+
+      // Build message: never show tone for questions
+      final toneLine = (!isQuestion && tone != null && tone.isNotEmpty)
+          ? "\n\nThis dream feels *$tone*."
+          : "";
+
       setState(() {
-        final toneLine = (tone.trim().isNotEmpty && tone != 'null')
-            ? "\n\nThis dream feels *$tone*."
-            : "";
         _message = "Dream Interpretation:\n$analysis$toneLine";
-        _imageGenerating = true;
+        _imageGenerating = shouldGen;
       });
 
       final prefs = await SharedPreferences.getInstance();
@@ -145,10 +154,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
       dreamDataChanged.value = true;
       _controller.clear();
 
-      await _generateDreamImage(dreamId);
+      if (shouldGen) {
+        await _generateDreamImage(dreamId);
+      } else {
+        // Question/decline path: set placeholder/question mark if provided
+        if (placeholderUrl != null && placeholderUrl.isNotEmpty) {
+          setState(() => _dreamImagePath = placeholderUrl);
+        }
+        // ensure spinner is off
+        setState(() => _imageGenerating = false);
+      }
+
     } catch (e) {
       setState(() {
         _message = "Dream submission failed.";
+        _imageGenerating = false; // make sure spinner is off on error
       });
     } finally {
       setState(() {
@@ -165,8 +185,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _dreamImagePath = imagePath;
         _imageGenerating = false;
       });
-    } catch (_) {}
+    } catch (_) {
+      setState(() => _imageGenerating = false);
+    }
   }
+  
   @override
   Widget build(BuildContext context) {
     return SafeArea(
