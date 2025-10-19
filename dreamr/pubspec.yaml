@@ -110,6 +110,10 @@ flutter:
   assets:
     - assets/images/icon.jpg
     - assets/images/icon.png
+    - assets/images/decline.png
+    - assets/images/question2.png
+    - assets/images/question3.png
+    - assets/images/missing.png
     - assets/images/google_logo.svg
     - assets/sound/tell_me_about.mp3
 
