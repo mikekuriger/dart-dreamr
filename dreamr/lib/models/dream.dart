@@ -1,3 +1,4 @@
+// models/dream.dart
 import 'package:dreamr/constants.dart';
 
 class Dream {
@@ -12,6 +13,7 @@ class Dream {
   final DateTime createdAt;
   final String? imageFile;
   final String? imageTile;
+  final String notes;
 
   Dream({
     required this.id,
@@ -25,6 +27,7 @@ class Dream {
     required this.createdAt,
     this.imageFile,
     this.imageTile,
+    this.notes = "",
   });
 
   Dream copyWith({
@@ -39,6 +42,7 @@ class Dream {
     DateTime? createdAt,
     String? imageFile,
     String? imageTile,
+    String? notes,
   }) {
     return Dream(
       id: id ?? this.id,
@@ -52,6 +56,7 @@ class Dream {
       createdAt: createdAt ?? this.createdAt,
       imageFile: imageFile ?? this.imageFile,
       imageTile: imageTile ?? this.imageTile,
+      notes: notes ?? this.notes,
     );
   }
 
@@ -72,6 +77,7 @@ class Dream {
       imageTile: json['image_tile'] != null
         ? '${AppConfig.baseUrl}${json['image_tile']}'
         : null,
+      notes: (json['notes'] as String?)?.trim() ?? "",
     );
   }
 }
