@@ -1,7 +1,7 @@
+// screens/dream_gallery_screen.dart
 import 'package:flutter/material.dart';
 import 'package:dreamr/models/dream.dart';
 import 'package:dreamr/services/api_service.dart';
-// import 'package:dreamr/widgets/main_scaffold.dart';
 import 'package:dreamr/screens/image_viewer_screen.dart';
 import 'package:dreamr/constants.dart';
 
@@ -54,7 +54,7 @@ class _DreamGalleryScreenState extends State<DreamGalleryScreen> {
       _loading = true;
     });
 
-    final dreams = await ApiService.fetchDreams();
+    final dreams = await ApiService.fetchGallery();
 
     setState(() {
       _dreams = dreams;
