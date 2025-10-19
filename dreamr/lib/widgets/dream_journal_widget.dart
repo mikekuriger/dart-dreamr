@@ -1,4 +1,5 @@
 // widgets/dream_journal_widget.dart
+import 'package:dreamr/theme/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:dreamr/models/dream.dart';
 import 'package:dreamr/services/api_service.dart';
@@ -6,7 +7,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 
 
-class DreamJournalWidget extends StatefulWidget {
+class DreamJournalWidget extends StatefulWidget { 
   final VoidCallback? onDreamsLoaded;
 
   const DreamJournalWidget({
@@ -23,6 +24,206 @@ class ToneStyle {
   final Color text;
   const ToneStyle(this.background, this.text);
 }
+
+class NotesSheet extends StatefulWidget {
+  final int dreamId;
+  const NotesSheet({super.key, required this.dreamId});
+
+  @override
+  State<NotesSheet> createState() => _NotesSheetState();
+}
+
+class _NotesSheetState extends State<NotesSheet> {
+  final _controller = TextEditingController();
+  bool _loading = true;
+  bool _saving = false;
+  String? _lastSeenIso;
+  String? _error;
+  Map<String, dynamic>? _serverCopy;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final data = await ApiService.getDreamNotes(widget.dreamId);
+      if (!mounted) return;
+      _controller.text = (data['notes'] as String?) ?? '';
+      _lastSeenIso = data['notes_updated_at'] as String?;
+    } catch (_) {
+      if (!mounted) return;
+      _error = 'Failed to load notes';
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _save({bool overwrite = false}) async {
+    setState(() { _saving = true; _error = null; _serverCopy = null; });
+    try {
+      final res = await ApiService.saveDreamNotes(
+        dreamId: widget.dreamId,
+        notes: _controller.text,
+        lastSeen: overwrite ? null : _lastSeenIso,
+      );
+      if (!mounted) return;
+      _lastSeenIso = res['notes_updated_at'] as String?;
+      Navigator.of(context).pop(true); // close sheet
+      return;
+    } on NotesTooLarge {
+      if (mounted) setState(() => _error = 'Keep it under 8000 characters.');
+    } on NotesConflict catch (c) {
+      if (!mounted) return;
+      _serverCopy = c.current;
+      setState(() {}); // show conflict UI
+
+      final action = await showDialog<String>(
+        context: context,
+        builder: (dctx) => AlertDialog(
+          title: const Text('Notes changed elsewhere'),
+          content: const Text('Load the latest from server or overwrite yours?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dctx, 'load'), child: const Text('Load theirs')),
+            TextButton(onPressed: () => Navigator.pop(dctx, 'overwrite'), child: const Text('Overwrite')),
+            TextButton(onPressed: () => Navigator.pop(dctx, 'cancel'), child: const Text('Cancel')),
+          ],
+        ),
+      );
+      if (!mounted) return;
+
+      if (action == 'load' && _serverCopy != null) {
+        _controller.text = (_serverCopy!['notes'] as String?) ?? '';
+        _lastSeenIso = _serverCopy!['notes_updated_at'] as String?;
+        setState(() => _serverCopy = null);
+      } else if (action == 'overwrite') {
+        await _save(overwrite: true); // will pop
+        return;
+      }
+    } on NotesHttp {
+      if (mounted) setState(() => _error = 'Save failed');
+    }
+    if (mounted) setState(() => _saving = false); // only if we didn’t pop
+  }
+
+  Future<void> _clear() async {
+    setState(() { _saving = true; _error = null; _serverCopy = null; });
+    try {
+      final res = await ApiService.saveDreamNotes(
+        dreamId: widget.dreamId,
+        notes: null,
+        lastSeen: _lastSeenIso,
+      );
+      if (!mounted) return;
+      _lastSeenIso = res['notes_updated_at'] as String?;
+      _controller.clear();
+      Navigator.of(context).pop(true);
+      return;
+    } on NotesConflict catch (c) {
+      if (!mounted) return;
+      _serverCopy = c.current;
+      setState(() {});
+      final action = await showDialog<String>(
+        context: context,
+        builder: (dctx) => AlertDialog(
+          title: const Text('Notes changed elsewhere'),
+          content: const Text('Load latest or overwrite with clear?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dctx, 'load'), child: const Text('Load theirs')),
+            TextButton(onPressed: () => Navigator.pop(dctx, 'overwrite'), child: const Text('Overwrite')),
+            TextButton(onPressed: () => Navigator.pop(dctx, 'cancel'), child: const Text('Cancel')),
+          ],
+        ),
+      );
+      if (!mounted) return;
+
+      if (action == 'load' && _serverCopy != null) {
+        _controller.text = (_serverCopy!['notes'] as String?) ?? '';
+        _lastSeenIso = _serverCopy!['notes_updated_at'] as String?;
+        setState(() => _serverCopy = null);
+      } else if (action == 'overwrite') {
+        await ApiService.saveDreamNotes(dreamId: widget.dreamId, notes: null, lastSeen: null);
+        if (mounted) Navigator.of(context).pop(true);
+        return;
+      }
+    } on NotesHttp {
+      if (mounted) setState(() => _error = 'Failed to clear');
+    }
+    if (mounted) setState(() => _saving = false);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 16, right: 16, top: 12,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              const Expanded(child: Text('Notes (private)',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white))),
+              if (_saving) const SizedBox(height: 16, width: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2)),
+            ]),
+            const SizedBox(height: 8),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else ...[
+              TextField(
+                controller: _controller,
+                maxLines: null,
+                maxLength: 8000,
+                decoration: const InputDecoration(
+                  hintText: 'Jot down anything about this dream…',
+                  hintStyle: TextStyle(color: Colors.grey),
+                  border: OutlineInputBorder(),
+                  filled: true,
+                ),
+                style: const TextStyle(color: Colors.black),
+                enabled: !_saving,
+              ),
+              const SizedBox(height: 8),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                ),
+              Row(children: [
+                ElevatedButton(onPressed: _saving ? null : () => _save(overwrite: false), child: const Text('Save')),
+                const SizedBox(width: 8),
+                TextButton(onPressed: _saving ? null : () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+                const Spacer(),
+                TextButton(onPressed: _saving ? null : _clear, child: const Text('Clear')),
+              ]),
+              if (_lastSeenIso != null) ...[
+                const SizedBox(height: 6),
+                Text('Last edited: $_lastSeenIso',
+                    style: const TextStyle(fontSize: 12, color: Colors.white70)),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 class DreamJournalWidgetState extends State<DreamJournalWidget> {
   
@@ -64,6 +265,21 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
     }
   }
 
+  // Tone symbol helper 
+  String toneSymbol(String tone) {
+    final t = tone.toLowerCase();
+    if (t.contains('peaceful')) return '☁️';             // soft cloud
+    if (t.contains('epic')) return '⚔️';                 // sword/courage
+    if (t.contains('whimsical')) return '✨';            // stars
+    if (t.contains('nightmarish')) return '🕷️';          // spider
+    if (t.contains('romantic')) return '🩷';             // flowers
+    if (t.contains('ancient')) return '⚱️';              // urn / ancient relic
+    if (t.contains('futuristic')) return '🔮';           // crystal ball
+    // if (t.contains('elegant')) return '༻❁༺';           // ornate flower
+    if (t.contains('elegant')) return '••࿐••';           // ornate flower
+    return '✨';                                         // default separator
+  }
+
   Future<void> _loadDreams() async {
     try {
       final dreams = await ApiService.fetchDreams();
@@ -84,6 +300,59 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
     setState(() => _loading = true);
     _loadDreams();
   }
+
+  Future<void> _openNotesEditor(int dreamId) async {
+    final changed = await showModalBottomSheet<bool>(
+    // await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.black87,
+      builder: (_) => NotesSheet(dreamId: dreamId),
+    );
+
+    if (changed == true && mounted) {
+      // Pull latest notes from server and update just this dream
+      final data  = await ApiService.getDreamNotes(dreamId);
+      final notes = (data['notes'] as String?)?.trim() ?? "";
+
+      setState(() {
+        final i = _dreams.indexWhere((d) => d.id == dreamId);
+        if (i != -1) {
+          _dreams[i] = _dreams[i].copyWith(notes: notes);
+        }
+      });
+    }
+  }
+
+    // Drop-in helper with fallback
+    Widget netImageWithFallback(
+    String? url, {
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.cover,
+    BorderRadius? radius,
+  }) {
+    final widget = (url == null || url.isEmpty)
+        ? Image.asset('assets/images/missing.png', width: width, height: height, fit: fit)
+        : Image.network(
+            url,
+            width: width,
+            height: height,
+            fit: fit,
+            // Show placeholder while loading
+            loadingBuilder: (ctx, child, prog) =>
+                prog == null ? child : Image.asset('assets/images/missing.png', width: width, height: height, fit: fit),
+            // Show placeholder on 404/any error
+            errorBuilder: (ctx, err, stack) =>
+                Image.asset('assets/images/missing.png', width: width, height: height, fit: fit),
+          );
+
+    if (radius != null) {
+      return ClipRRect(borderRadius: radius, child: widget);
+    }
+    return widget;
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -111,10 +380,7 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
               width: double.infinity, // full width
               padding: const EdgeInsets.all(8), // inner padding inside the white box
               decoration: BoxDecoration(
-
-                // color: _getToneColor(dream.tone),
                 color: toneStyle.background,
-
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Column(
@@ -130,14 +396,12 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (dream.imageTile != null && dream.imageTile!.isNotEmpty)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: Image.network(
-                              dream.imageTile!,
-                              width: 48,
-                              height: 48,
-                              fit: BoxFit.cover,
-                            ),
+                          netImageWithFallback(
+                            dream.imageTile,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            radius: BorderRadius.circular(4),
                           ),
                         const SizedBox(width: 6),
                         Expanded(
@@ -157,70 +421,152 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontStyle: FontStyle.italic,
-                                  // color: Colors.black87,
                                   color: toneStyle.text,
                                 ),
                               ),
-
                             ],
                           ),
                         ),
-                        // Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
                       ],
                     ),
                   ),
+// Expanded content
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    child: isExpanded
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Divider
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Divider(
+                                      color: toneStyle.text.withValues(alpha: 0.25),
+                                      thickness: 1,
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    child: Text(
+                                      toneSymbol(dream.tone), // 🕷️, 🌸, ☁️, etc.
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        color: toneStyle.text.withValues(alpha: 0.7),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Divider(
+                                      color: toneStyle.text.withValues(alpha: 0.25),
+                                      thickness: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
 
-                  if (isExpanded)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (dream.text.isNotEmpty) ...[
-                          // SelectableText(dream.text,
-                          //     style: TextStyle(
-                          //         fontSize: 12, fontStyle: FontStyle.italic,color: toneStyle.text,
-                          //     )
-                          // ),
-                          SelectableRegion(
-                            focusNode: FocusNode(),
-                            selectionControls: MaterialTextSelectionControls(),
-                            child: Text(
-                              dream.text,
-                              style: TextStyle(
-                                  fontSize: 13, fontStyle: FontStyle.italic,color: toneStyle.text,
-                              )
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-                        if (dream.analysis.isNotEmpty) ...[
-                          Text("Analysis:",
-                              style:
-                                  TextStyle(fontSize: 13, fontWeight: FontWeight.bold,color: toneStyle.text,)),
-                          MarkdownBody(
-                            data: dream.analysis,
-                            styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                              p: TextStyle(color: toneStyle.text, fontSize: 12),
-                              strong: TextStyle(color: toneStyle.text, fontWeight: FontWeight.bold),
-                              em: TextStyle(color: toneStyle.text, fontStyle: FontStyle.italic),
-                              h1: TextStyle(color: toneStyle.text, fontSize: 18, fontWeight: FontWeight.bold),
-                              h2: TextStyle(color: toneStyle.text, fontSize: 16, fontWeight: FontWeight.bold),
-                              // Add more elements as needed
-                            ),
-                          ),
+                              // Dream Text Header
+                              Text(
+                                "My Dream:",
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: toneStyle.text),
+                              ),
 
-                          const SizedBox(height: 6),
-                        ],
-                        if (dream.imageFile != null && dream.imageFile!.isNotEmpty)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              dream.imageFile!,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Text("⚠️ Failed to load image."),
-                            ),
-                          ),
-                      ],
-                    ),
+                              // Dream Text
+                              if (dream.text.isNotEmpty) ...[
+                                SelectableText(
+                                  dream.text,
+                                  style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: toneStyle.text),
+                                ),
+                                const SizedBox(height: 10),
+                              ],
+
+                              // Dream Image
+                              if (dream.imageFile != null && dream.imageFile!.isNotEmpty)
+                                netImageWithFallback(
+                                  dream.imageFile,
+                                  fit: BoxFit.cover,
+                                  radius: BorderRadius.circular(8),
+                                ),
+
+                              // Gradient Divider
+                              Container(
+                                height: 1,
+                                margin: const EdgeInsets.symmetric(vertical: 12),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.transparent,
+                                      toneStyle.text.withValues(alpha: 0.7),
+                                      Colors.transparent,
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              // Dream Analysis
+                              if (dream.analysis.isNotEmpty) ...[
+                                Text(
+                                  "Analysis:",
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: toneStyle.text),
+                                ),
+                                MarkdownBody(
+                                  data: dream.analysis,
+                                  styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                                    p: TextStyle(color: toneStyle.text, fontSize: 13),
+                                    strong: TextStyle(color: toneStyle.text, fontWeight: FontWeight.bold),
+                                    em: TextStyle(color: toneStyle.text, fontStyle: FontStyle.italic),
+                                    h1: TextStyle(color: toneStyle.text, fontSize: 18, fontWeight: FontWeight.bold),
+                                    h2: TextStyle(color: toneStyle.text, fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                              ],
+
+                              // Dream Notes
+                              if (dream.notes.isNotEmpty) ...[
+                                Text(
+                                  "Personal Notes:",
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: toneStyle.text),
+                                ),
+                                MarkdownBody(
+                                  data: dream.notes,
+                                  styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                                    p: TextStyle(color: toneStyle.text, fontSize: 12),
+                                    strong: TextStyle(color: toneStyle.text, fontWeight: FontWeight.bold),
+                                    em: TextStyle(color: toneStyle.text, fontStyle: FontStyle.italic),
+                                    h1: TextStyle(color: toneStyle.text, fontSize: 18, fontWeight: FontWeight.bold),
+                                    h2: TextStyle(color: toneStyle.text, fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                              ],
+
+                              // Notes Button
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _openNotesEditor(dream.id),
+                                  icon: const Icon(Icons.edit_note, size: 16),
+                                  label: Text(((dream.notes ?? '').trim().isNotEmpty) ? 'Edit notes' : 'Add notes'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.purple600,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                    minimumSize: const Size(0, 0),
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                    elevation: 0,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+
+
                 ],
               ),
             ),
