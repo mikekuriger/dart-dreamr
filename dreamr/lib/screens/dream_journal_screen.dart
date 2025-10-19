@@ -113,56 +113,10 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
         _loadStats();
       },
       child: SingleChildScrollView(
-        // controller: _scrollController,
         padding: const EdgeInsets.all(4),
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           children: [
-            // Padding(
-            //   padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
-            //   child: Container(
-            //     width: double.infinity,
-            //     padding: const EdgeInsets.all(12),
-            //     decoration: BoxDecoration(
-            //       color: Colors.deepPurple.shade600,
-            //       borderRadius: BorderRadius.circular(8),
-            //     ),
-            //     child: Column(
-            //       crossAxisAlignment: CrossAxisAlignment.start,
-            //       children: [
-            //         const Text(
-            //           "Dreamr ✨ Stats",
-            //           style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
-            //         ),
-            //         const SizedBox(height: 6),
-            //         Text("Dreams Logged: $_dreamCount", style: const TextStyle(color: Colors.white)),
-            //         Text("Most Common Tone: $_mostCommonTone", style: const TextStyle(color: Colors.white)),
-            //         Text("Longest Dream: $_longestWordCount words", style: const TextStyle(color: Colors.white)),
-            //         const SizedBox(height: 10),
-            //         Align(
-            //           alignment: Alignment.centerLeft,
-            //           child: ElevatedButton.icon(
-            //             icon: const Icon(Icons.edit_note),
-            //             label: const Text("Add a New Dream"),
-            //             style: ElevatedButton.styleFrom(
-            //               backgroundColor: Colors.white,
-            //               foregroundColor: Colors.deepPurple.shade600,
-            //               shape: RoundedRectangleBorder(
-            //                 borderRadius: BorderRadius.circular(10),
-            //                 )
-            //               ),
-            //             onPressed: () {
-            //               Navigator.pushReplacement(
-            //                 context,
-            //                 MaterialPageRoute(builder: (context) => const MainScaffold(initialIndex: 0)),
-            //               );
-            //             },
-            //           ),
-            //         ),
-            //       ],
-            //     ),
-            //   ),
-            // ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
               child: GestureDetector(
