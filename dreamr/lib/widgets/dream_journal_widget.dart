@@ -548,7 +548,7 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
                                 child: ElevatedButton.icon(
                                   onPressed: () => _openNotesEditor(dream.id),
                                   icon: const Icon(Icons.edit_note, size: 16),
-                                  label: Text(((dream.notes ?? '').trim().isNotEmpty) ? 'Edit notes' : 'Add notes'),
+                                  label: Text(((dream.notes).trim().isNotEmpty) ? 'Edit notes' : 'Add notes'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.purple600,
                                     foregroundColor: Colors.white,
