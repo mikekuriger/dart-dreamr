@@ -182,19 +182,6 @@ class ApiService {
     );
   }
 
-  // Old Google auth
-  // static Future<void> googleLogin(String idToken) async {
-  //   // debugPrint("🔥 Attempting Google login with token: $idToken");
-  //   final response = await DioClient.dio.post(
-  //     '/api/google_login',
-  //     data: {'id_token': idToken},
-  //   );
-
-  //   if (response.statusCode != 200) {
-  //     throw Exception('Google login failed');
-  //   }
-  // }
-
   // Google auth
   static Future<Map<String, dynamic>> googleLogin(String idToken) async {
     final res = await DioClient.dio.post('/api/google_login', data: {'id_token': idToken},
@@ -319,30 +306,6 @@ class ApiService {
     }
   }
 
-  // OLD Generate Image
-  // static Future<String> generateDreamImage(int dreamId) async {
-  //   final response = await DioClient.dio.post(
-  //     '/api/image_generate',
-  //     data: {"dream_id": dreamId},
-  //   );
-
-  //   final imagePath = response.data['image'] ?? '';
-  //   // final baseUrl = AppConfig.baseUrl;
-
-  //   return imagePath.startsWith('http')
-  //       ? imagePath
-  //       : '${AppConfig.baseUrl}$imagePath';
-  // }
-
-  // static Future<bool> isLoggedIn() async {
-  //   try {
-  //     final res = await DioClient.dio.get('/api/dreams');
-  //     return res.statusCode == 200;
-  //   } catch (_) {
-  //     return false;
-  //   }
-  // }
-
   // Generate Image
   static Future<String> generateDreamImage(int dreamId) async {
     final t0 = DateTime.now();
@@ -460,7 +423,14 @@ class ApiService {
     throw NotesHttp('Notes save failed', code, res.data);
   }
 
-
+  // Fetch dreams updated since a given ISO timestamp
+  static Future<List<Dream>> fetchDreamsUpdatedSince({
+    String? updatedSinceIso,
+    bool includeHidden = false,
+  }) async {
+    // TEMP fallback so nothing breaks until backend supports it:
+    return includeHidden ? fetchAllDreams() : fetchDreams();
+  }
 
   // — helpers —
   static String _absoluteUrl(String maybe) {
