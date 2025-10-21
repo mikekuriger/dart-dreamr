@@ -145,7 +145,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           : "";
 
       setState(() {
-        _message = "Dream Interpretation:\n$analysis$toneLine";
+        _message = "$analysis$toneLine";
+        // _message = "Dream Interpretation:\n$analysis$toneLine";
         _imageGenerating = shouldGen;
       });
 
