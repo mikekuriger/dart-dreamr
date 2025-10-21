@@ -153,7 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                           // GENDER
                           DropdownButtonFormField<String>(
-                            value: _gender?.isNotEmpty == true ? _gender : null,
+                            initialValue: _gender?.isNotEmpty == true ? _gender : null,
                             decoration: _inputDecoration('Gender'),
                             dropdownColor: AppColors.purple950,
                             style: const TextStyle(color: Colors.white),
