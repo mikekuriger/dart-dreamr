@@ -1,5 +1,8 @@
+// screens/image_viewer_screen.dart
 import 'package:flutter/material.dart';
 import 'package:dreamr/models/dream.dart';
+import 'package:dreamr/widgets/dream_image.dart';
+import 'package:dreamr/services/image_store.dart';
 
 class ImageViewerScreen extends StatefulWidget {
   final List<Dream> dreams;
@@ -46,12 +49,26 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
               children: [
                 const SizedBox(height: 16),
                 InteractiveViewer(
-                  child: Image.network(
-                    dream.imageFile ?? '',
+                  child: DreamImage(
+                    dreamId: dream.id,
+                    url: dream.imageFile,
+                    kind: DreamImageKind.file,
                     fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.white)),
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height * 0.6,
+                    placeholder: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                    error: const Center(
+                      child: Icon(Icons.broken_image, size: 40, color: Colors.white),
+                    ),
                   ),
+                  // child: Image.network(
+                  //   dream.imageFile ?? '',
+                  //   fit: BoxFit.contain,
+                  //   errorBuilder: (context, error, stackTrace) =>
+                  //       const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.white)),
+                  // ),
                 ),
                 const SizedBox(height: 12),
                 Padding(

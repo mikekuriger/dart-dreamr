@@ -1,9 +1,13 @@
+// widgets/dream_journal_editor_widget.dart
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:dreamr/models/dream.dart';
 import 'package:dreamr/services/api_service.dart';
 import 'package:intl/intl.dart';
+import 'package:dreamr/widgets/dream_image.dart';
+import 'package:dreamr/services/image_store.dart'; // for DreamImageKind
+
 
 
 class DreamJournalEditorWidget extends StatefulWidget {
@@ -117,12 +121,20 @@ class DreamJournalEditorWidgetState extends State<DreamJournalEditorWidget> {
                   if (dream.imageTile != null && dream.imageTile!.isNotEmpty)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
-                      child: Image.network(
-                        dream.imageTile!,
-                        width: 48,
-                        height: 48,
-                        fit: BoxFit.cover,
-                      ),
+                        child: DreamImage(
+                          dreamId: dream.id,
+                          url: dream.imageTile!,
+                          kind: DreamImageKind.tile,
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                        ),
+                      // child: Image.network(
+                      //   dream.imageTile!,
+                      //   width: 48,
+                      //   height: 48,
+                      //   fit: BoxFit.cover,
+                      // ),
                     ),
                   const SizedBox(width: 6),
                   // Date and summary

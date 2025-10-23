@@ -4,6 +4,8 @@ import 'package:dreamr/models/dream.dart';
 import 'package:dreamr/services/api_service.dart';
 import 'package:dreamr/screens/image_viewer_screen.dart';
 import 'package:dreamr/constants.dart';
+import 'package:dreamr/widgets/dream_image.dart';
+import 'package:dreamr/services/image_store.dart';
 
 
 
@@ -98,13 +100,29 @@ class _DreamGalleryScreenState extends State<DreamGalleryScreen> {
                   },
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      dream.imageFile ?? '',
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Center(child: Icon(Icons.broken_image, size: 40)),
-                    ),
+                      child: DreamImage(
+                        dreamId: dream.id,
+                        url: dream.imageFile ?? '',
+                        kind: DreamImageKind.file,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        placeholder: Container(
+                          color: Colors.grey[300],
+                          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                        ),
+                        error: Container(
+                          color: Colors.grey[300],
+                          child: const Center(child: Icon(Icons.broken_image, size: 40)),
+                        ),
+                      ),
+                    // child: Image.network(
+                    //   dream.imageFile ?? '',
+                    //   width: double.infinity,
+                    //   fit: BoxFit.cover,
+                    //   errorBuilder: (context, error, stackTrace) =>
+                    //       const Center(child: Icon(Icons.broken_image, size: 40)),
+                    // ),
                   ),
                 ),
               ),

@@ -5,6 +5,10 @@ import 'package:dreamr/models/dream.dart';
 import 'package:dreamr/services/api_service.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
+import 'dart:io';
+import 'package:dreamr/services/image_store.dart';
+import 'package:dreamr/services/dio_client.dart';
+
 
 
 class DreamJournalWidget extends StatefulWidget { 
@@ -353,6 +357,49 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
     return widget;
   }
 
+  // Local-first image with same ergonomics as netImageWithFallback
+  Widget localFirstImage({
+    required int dreamId,
+    required String? url,
+    required DreamImageKind kind, // DreamImageKind.tile or DreamImageKind.file
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.cover,
+    BorderRadius? radius,
+  }) {
+    Widget buildPlaceholder() =>
+        Image.asset('assets/images/missing.png', width: width, height: height, fit: fit);
+
+    return FutureBuilder<File?>(
+      future: () async {
+        if (url == null || url.isEmpty) return null;
+
+        // 1) Try local
+        final hit = await ImageStore.localIfExists(dreamId, kind, url);
+        if (hit != null) return hit;
+
+        // 2) Download once, then it lives on disk
+        try {
+          final f = await ImageStore.download(dreamId, kind, url, dio: DioClient.dio);
+          return f;
+        } catch (_) {
+          return null;
+        }
+      }(),
+      builder: (ctx, snap) {
+        final file = snap.data;
+        final w = (file != null)
+            ? Image.file(file, width: width, height: height, fit: fit)
+            : buildPlaceholder();
+
+        if (radius != null) {
+          return ClipRRect(borderRadius: radius, child: w);
+        }
+        return w;
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -396,13 +443,23 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (dream.imageTile != null && dream.imageTile!.isNotEmpty)
-                          netImageWithFallback(
-                            dream.imageTile,
+                          localFirstImage(
+                            dreamId: dream.id,
+                            url: dream.imageTile,
+                            kind: DreamImageKind.tile,
                             width: 48,
                             height: 48,
                             fit: BoxFit.cover,
                             radius: BorderRadius.circular(4),
                           ),
+                        // if (dream.imageTile != null && dream.imageTile!.isNotEmpty)
+                        //   netImageWithFallback(
+                        //     dream.imageTile,
+                        //     width: 48,
+                        //     height: 48,
+                        //     fit: BoxFit.cover,
+                        //     radius: BorderRadius.circular(4),
+                        //   ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Column(
@@ -482,12 +539,20 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
                               ],
 
                               // Dream Image
-                              if (dream.imageFile != null && dream.imageFile!.isNotEmpty)
-                                netImageWithFallback(
-                                  dream.imageFile,
-                                  fit: BoxFit.cover,
-                                  radius: BorderRadius.circular(8),
-                                ),
+                                if (dream.imageFile != null && dream.imageFile!.isNotEmpty)
+                                  localFirstImage(
+                                    dreamId: dream.id,
+                                    url: dream.imageFile,
+                                    kind: DreamImageKind.file,
+                                    fit: BoxFit.cover,
+                                    radius: BorderRadius.circular(8),
+                                  ),
+                              // if (dream.imageFile != null && dream.imageFile!.isNotEmpty)
+                              //   netImageWithFallback(
+                              //     dream.imageFile,
+                              //     fit: BoxFit.cover,
+                              //     radius: BorderRadius.circular(8),
+                              //   ),
 
                               // Gradient Divider
                               Container(
