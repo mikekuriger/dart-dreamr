@@ -70,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const MainScaffold(initialIndex: 1)),
+        MaterialPageRoute(builder: (_) => const MainScaffold(initialIndex: 0)),
       );
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
