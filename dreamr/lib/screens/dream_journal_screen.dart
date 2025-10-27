@@ -16,11 +16,11 @@ class DreamJournalScreen extends StatefulWidget {
 }
 
 class _DreamJournalScreenState extends State<DreamJournalScreen> {
-  bool _statsExpanded = false;
+  bool _statsExpanded = true;
   Map<String, int> _toneCounts = {};
 
 
-  // //For Calendar
+  //For Calendar
   // DateTime _focusedDay = DateTime.now();
   // DateTime? _selectedDay;
   // List<Dream> _allDreams = [];
@@ -67,9 +67,9 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
     _journalKey.currentState?.refresh();
 
     // 👇 collapse stats box whenever this screen is triggered to refresh
-    setState(() {
-      _statsExpanded = false;
-    });
+    // setState(() {
+    //   _statsExpanded = true;
+    // });
   }
 
   void _loadStats() {
