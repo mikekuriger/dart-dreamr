@@ -51,3 +51,4 @@ build
 macos/
 google_client_ID
 google_client_ID-release
+key.txt
