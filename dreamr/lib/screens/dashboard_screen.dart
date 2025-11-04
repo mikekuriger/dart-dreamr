@@ -7,6 +7,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dreamr/services/api_service.dart';
 import 'package:dreamr/constants.dart';
 import 'package:dreamr/theme/colors.dart';
+import 'package:dreamr/models/dream.dart';
+import 'package:dreamr/services/image_store.dart';
+import 'package:dreamr/services/dio_client.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:mime/mime.dart';
+import 'dart:io';
+
 
 class DashboardScreen extends StatefulWidget {
   final ValueNotifier<int> refreshTrigger;
@@ -25,7 +32,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final TextEditingController _controller = TextEditingController();
   final AudioPlayer _player = AudioPlayer();
-
+  
   String? _userName;
   bool _enableAudio = false;
   bool _hasPlayedIntroAudio = false;
@@ -34,6 +41,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _imageGenerating = false;
   String? _message;
   String? _dreamImagePath;
+  String? _lastDreamText;
+  int? _lastDreamId;
 
   @override
   void initState() {
@@ -123,6 +132,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _imageGenerating = false;
       _message = null;
       _dreamImagePath = null;
+      _lastDreamText = text;
     });
 
     widget.onAnalyzingChange?.call(true); // 👈 disable/hide nav
@@ -131,9 +141,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final result = await ApiService.submitDream(text);
       final analysis = result['analysis'] as String;
       final dreamId = int.parse(result['dream_id'].toString());
+      setState(() { _lastDreamId = dreamId; });
 
-      // 👇 Single source of truth for behavior
-      // final shouldGen   = result['should_generate_image'] == true;
       final shouldGen = (result['should_generate_image'] as bool?) ?? false;
       final isQuestion  = result['is_question'] == true; // optional: for copy/UX only
       final String? tone = (result['tone'] is String) ? (result['tone'] as String).trim() : null;
@@ -146,7 +155,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       setState(() {
         _message = "$analysis$toneLine";
-        // _message = "Dream Interpretation:\n$analysis$toneLine";
         _imageGenerating = shouldGen;
       });
 
@@ -158,7 +166,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (shouldGen) {
         await _generateDreamImage(dreamId);
       } else {
-        // Question/decline path: set placeholder/question mark if provided
         if (placeholderUrl != null && placeholderUrl.isNotEmpty) {
           setState(() => _dreamImagePath = placeholderUrl);
         }
@@ -175,7 +182,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         _loading = false;
       });
-      widget.onAnalyzingChange?.call(false); // 👈 re‑enable/show nav
+      widget.onAnalyzingChange?.call(false); 
     }
   }
 
@@ -190,7 +197,79 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() => _imageGenerating = false);
     }
   }
-  
+
+// sharing
+// Anchor key for share button
+  final GlobalKey _shareAnchorKey = GlobalKey();
+
+// Get origin Rect from GlobalKey
+  Rect _originFromKey(GlobalKey key) {
+    final ctx = key.currentContext;
+    if (ctx == null) return const Rect.fromLTWH(100, 100, 1, 1); // safe fallback
+    final box = ctx.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize || box.size.isEmpty) {
+      return const Rect.fromLTWH(100, 100, 1, 1);
+    }
+    final topLeft = box.localToGlobal(Offset.zero);
+    return topLeft & box.size;
+  }
+
+// Build shareable text content
+  String _buildShareText() {
+    final userText   = (_lastDreamText ?? '').trim();     // what user typed
+    final analysisMd = (_message ?? '').trim();     // AI analysis (markdown)
+    final parts = <String>[];
+    if (userText.isNotEmpty) parts.add(userText);
+    if (analysisMd.isNotEmpty) parts.add(analysisMd);
+    return parts.join('\n\n-- Dreamr ✨ Analysis\n\n');               // separator
+  }
+
+// Resolve image file for sharing
+  Future<File?> _resolveImageFileForShare() async {
+    if (_dreamImagePath == null || _dreamImagePath!.isEmpty) return null;
+    final id = _lastDreamId;
+    if (id == null) return null;
+
+    // Local-first; download once if missing
+    final hit = await ImageStore.localIfExists(id, DreamImageKind.file, _dreamImagePath!);
+    if (hit != null) return hit;
+    try {
+      return await ImageStore.download(id, DreamImageKind.file, _dreamImagePath!, dio: DioClient.dio);
+    } catch (_) {
+      return null;
+    }
+  }
+
+// Share dream image (with optional text)
+  Future<void> _shareDreamImage({required Rect origin, bool includeText = true}) async {
+    final f = await _resolveImageFileForShare();
+    final shareText = includeText ? _buildShareText() : '';
+
+    if (f == null || !await f.exists()) {
+      if (shareText.isNotEmpty) {
+        await SharePlus.instance.share(
+          ShareParams(text: shareText, sharePositionOrigin: origin),
+        );
+        return;
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nothing to share yet')),
+      );
+      return;
+    }
+
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(f.path, mimeType: lookupMimeType(f.path) ?? 'image/jpeg')],
+        text: shareText.isNotEmpty ? shareText : null,
+        sharePositionOrigin: origin, // required on iPad/macOS
+      ),
+    );
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -329,6 +408,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   const Center(child: CircularProgressIndicator()),
                               errorWidget: (context, url, error) =>
                                   const Icon(Icons.broken_image, size: 48),
+                            ),
+                          ),
+              // Share Dream
+                          // Row(
+                          //   children: [
+                          //     ElevatedButton.icon(
+                          //       onPressed: () => _shareDreamImage(includeText: false),
+                          //       icon: const Icon(Icons.share, size: 16),
+                          //       label: const Text('Share Image'),
+                          //       style: ElevatedButton.styleFrom(
+                          //         backgroundColor: Color.fromARGB(255, 75, 3, 143),
+                          //         foregroundColor: Colors.white,
+                          //         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          //         minimumSize: const Size(0, 0),
+                          //         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          //         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          //         elevation: 0,
+                          //       ),
+                          //     ),
+                          //     PopupMenuButton<String>(
+                          //       icon: const Icon(Icons.share),
+                          //       onSelected: (v) => _shareDreamImage(includeText: v == 'with_text'),
+                          //       itemBuilder: (_) => const [
+                          //         PopupMenuItem(value: 'image_only', child: Text('Share image')),
+                          //         PopupMenuItem(value: 'with_text',  child: Text('Share image + dream')),
+                          //       ],
+                          //     ),
+                          //   ],
+                          // ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: PopupMenuButton<String>(
+                              padding: EdgeInsets.zero,
+                              tooltip: 'Share ✨',
+                              offset: const Offset(0, 32),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              onSelected: (v) {
+                                final origin = _originFromKey(_shareAnchorKey);
+                                _shareDreamImage(includeText: v == 'with_text', origin: origin);
+                              },
+                              itemBuilder: (ctx) => const [
+                                PopupMenuItem(value: 'image_only', child: Text('Share image')),
+                                PopupMenuItem(value: 'with_text',  child: Text('Share image + dream')),
+                              ],
+                              // Custom trigger: icon + text
+                              child: Container(
+                                key: _shareAnchorKey,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color.fromARGB(255, 75, 3, 143), // match your button color
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.share, size: 16, color: Colors.white),
+                                    SizedBox(width: 6),
+                                    Text('Share ✨', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                    SizedBox(width: 2),
+                                    // Icon(Icons.arrow_drop_down, size: 18, color: Colors.white),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ],

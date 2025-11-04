@@ -63,12 +63,6 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
                       child: Icon(Icons.broken_image, size: 40, color: Colors.white),
                     ),
                   ),
-                  // child: Image.network(
-                  //   dream.imageFile ?? '',
-                  //   fit: BoxFit.contain,
-                  //   errorBuilder: (context, error, stackTrace) =>
-                  //       const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.white)),
-                  // ),
                 ),
                 const SizedBox(height: 12),
                 Padding(

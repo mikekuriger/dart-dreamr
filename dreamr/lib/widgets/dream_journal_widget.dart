@@ -1,14 +1,16 @@
 // widgets/dream_journal_widget.dart
-import 'package:dreamr/theme/colors.dart';
-import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:dreamr/models/dream.dart';
 import 'package:dreamr/services/api_service.dart';
+import 'package:dreamr/services/dio_client.dart';
+import 'package:dreamr/services/image_store.dart';
+import 'package:dreamr/theme/colors.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
-import 'dart:io';
-import 'package:dreamr/services/image_store.dart';
-import 'package:dreamr/services/dio_client.dart';
-
+import 'package:mime/mime.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 
 
 class DreamJournalWidget extends StatefulWidget { 
@@ -284,6 +286,95 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
     return '✨';                                         // default separator
   }
 
+// SHARING
+// Anchor key for share position
+final GlobalKey _shareAnchorKey = GlobalKey();
+
+// Get share origin rect
+Rect _originFromKey(GlobalKey key) {
+  final ctx = key.currentContext;
+  if (ctx == null) return const Rect.fromLTWH(100, 100, 1, 1); // safe fallback
+  final box = ctx.findRenderObject() as RenderBox?;
+  if (box == null || !box.hasSize || box.size.isEmpty) {
+    return const Rect.fromLTWH(100, 100, 1, 1);
+  }
+  final topLeft = box.localToGlobal(Offset.zero);
+  return topLeft & box.size;
+}
+
+// Resolve dream image file for sharing
+  Future<File?> _resolveDreamImageFile(Dream d) async {
+    final url = d.imageFile;
+    if (url == null || url.isEmpty) return null;
+
+    // 1) local hit
+    final hit = await ImageStore.localIfExists(d.id, DreamImageKind.file, url);
+    if (hit != null) return hit;
+
+    // 2) download once if missing
+    try {
+      final f = await ImageStore.download(d.id, DreamImageKind.file, url, dio: DioClient.dio);
+      return f;
+    } catch (_) {
+      return null;
+    }
+  }
+
+// Share dream with image and text
+  Future<void> _shareDream(Dream d) async {
+    final f = await _resolveDreamImageFile(d);
+    if (f == null || !await f.exists()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Image not available to share')),
+      );
+      return;
+    }
+
+    String combinedDreamText(Dream d) {
+      final parts = <String>[];
+      if (d.summary.isNotEmpty) parts.add(d.summary.trim());
+      if (d.text.isNotEmpty) parts.add(d.text.trim());
+      if (d.analysis.isNotEmpty) parts.add(d.analysis.trim());
+      if (parts.isEmpty) return '';
+      return parts.join('\n\n────────────\n\n');
+    }
+
+    final shareText = combinedDreamText(d);
+    final mime = lookupMimeType(f.path) ?? 'image/jpeg';
+    final origin = _originFromKey(_shareAnchorKey);
+
+    await SharePlus.instance.share(
+      ShareParams(
+        title: d.summary.isNotEmpty ? d.summary : null,
+        text: shareText.isNotEmpty ? shareText : null,
+        files: [XFile(f.path, mimeType: mime, name: f.uri.pathSegments.last)],
+        sharePositionOrigin: origin,
+      ),
+    );
+  }
+
+    // Future<void> _shareDreamImage(Dream d) async {
+    // final f = await _resolveDreamImageFile(d);
+    // if (f == null || !await f.exists()) {
+    //   if (!mounted) return;
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(content: Text('Image not available to share')),
+    //   );
+    //   return;
+    // }
+
+  //   final mime = lookupMimeType(f.path) ?? 'image/jpeg';
+
+  //   await SharePlus.instance.share(
+  //     ShareParams(
+  //       text: d.summary.isNotEmpty ? d.summary : null,
+  //       files: [XFile(f.path, mimeType: mime, name: f.uri.pathSegments.last)],
+  //     ),
+  //   );
+  // }
+  
+// Load dreams from API
   Future<void> _loadDreams() async {
     try {
       final dreams = await ApiService.fetchDreams();
@@ -540,19 +631,30 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
 
                               // Dream Image
                                 if (dream.imageFile != null && dream.imageFile!.isNotEmpty)
-                                  localFirstImage(
-                                    dreamId: dream.id,
-                                    url: dream.imageFile,
-                                    kind: DreamImageKind.file,
-                                    fit: BoxFit.cover,
-                                    radius: BorderRadius.circular(8),
-                                  ),
-                              // if (dream.imageFile != null && dream.imageFile!.isNotEmpty)
-                              //   netImageWithFallback(
-                              //     dream.imageFile,
-                              //     fit: BoxFit.cover,
-                              //     radius: BorderRadius.circular(8),
-                              //   ),
+                                localFirstImage( 
+                                  dreamId: dream.id, 
+                                  url: dream.imageFile, 
+                                  kind: DreamImageKind.file, 
+                                  fit: BoxFit.cover, 
+                                  radius: BorderRadius.circular(8), 
+                                ),
+
+                              // Share
+                                  // ElevatedButton.icon(
+                                  //   onPressed: () => _shareDreamImage(dream),
+                                  //   icon: const Icon(Icons.share, size: 16),
+                                  //   label: const Text('Share Image'),
+                                  //   style: ElevatedButton.styleFrom(
+                                  //     backgroundColor: const Color.fromARGB(255, 75, 3, 143),
+                                  //     foregroundColor: Colors.white,
+                                  //     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  //     minimumSize: const Size(0, 0),
+                                  //     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  //     textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                  //     elevation: 0,
+                                  //   ),
+                                  // ),
 
                               // Gradient Divider
                               Container(
@@ -608,24 +710,66 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
                               ],
 
                               // Notes Button
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: ElevatedButton.icon(
-                                  onPressed: () => _openNotesEditor(dream.id),
-                                  icon: const Icon(Icons.edit_note, size: 16),
-                                  label: Text(((dream.notes).trim().isNotEmpty) ? 'Edit notes' : 'Add notes'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.purple600,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                    minimumSize: const Size(0, 0),
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                                    elevation: 0,
+                              Row(
+                                children: [
+                                  // Notes
+                                  ElevatedButton.icon(
+                                    onPressed: () => _openNotesEditor(dream.id),
+                                    icon: const Icon(Icons.edit_note, size: 16),
+                                    label: Text(((dream.notes).trim().isNotEmpty) ? 'Edit notes' : 'Add notes'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color.fromARGB(255, 75, 3, 143),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      minimumSize: const Size(0, 0),
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                      elevation: 0,
+                                    ),
                                   ),
-                                ),
-                              ),
+                                  const SizedBox(width: 8),
+
+                                  // Share Dream
+                                  Container(
+                                    key: _shareAnchorKey,
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => _shareDream(dream),
+                                      icon: const Icon(Icons.share, size: 16),
+                                      label: const Text('Share ✨'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Color.fromARGB(255, 75, 3, 143),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                        minimumSize: const Size(0, 0),
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                        elevation: 0,
+                                      ),
+                                    ),
+                                  )
+                                ],
+                              )
+
+                              // Align(
+                              //   alignment: Alignment.centerLeft,
+                              //   child: ElevatedButton.icon(
+                              //     onPressed: () => _openNotesEditor(dream.id),
+                              //     icon: const Icon(Icons.edit_note, size: 16),
+                              //     label: Text(((dream.notes).trim().isNotEmpty) ? 'Edit notes' : 'Add notes'),
+                              //     style: ElevatedButton.styleFrom(
+                              //       backgroundColor: AppColors.purple600,
+                              //       foregroundColor: Colors.white,
+                              //       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              //       minimumSize: const Size(0, 0),
+                              //       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              //       textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                              //       elevation: 0,
+                              //     ),
+                              //   ),
+                              // ),
                             ],
                           )
                         : const SizedBox.shrink(),

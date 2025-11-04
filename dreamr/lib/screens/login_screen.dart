@@ -70,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const MainScaffold(initialIndex: 0)),
+        MaterialPageRoute(builder: (_) => const MainScaffold(initialIndex: 0)),   // <- where user lands upon loggin in - 0=journal, 1=dream entry, 2=gallery, etc.
       );
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
@@ -113,11 +113,14 @@ class _LoginScreenState extends State<LoginScreen> {
       await _secure.delete(key: 'email');
       await _secure.delete(key: 'password');
 
-
+      
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('loggedIn', true);
+      
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const MainScaffold(initialIndex: 1)),
+        MaterialPageRoute(builder: (_) => const MainScaffold(initialIndex: 0)),   // <- where user lands upon loggin in - 0=journal, 1=dream entry, 2=gallery, etc.
       );
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
