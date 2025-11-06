@@ -4,8 +4,8 @@ import 'package:dreamr/widgets/main_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:dreamr/widgets/dream_journal_widget.dart';
 import 'package:dreamr/constants.dart';
-
-
+import 'package:fl_chart/fl_chart.dart';
+import 'dart:math' as math;
 
 class DreamJournalScreen extends StatefulWidget {
   final ValueNotifier<int> refreshTrigger;
@@ -18,7 +18,6 @@ class DreamJournalScreen extends StatefulWidget {
 class _DreamJournalScreenState extends State<DreamJournalScreen> {
   bool _statsExpanded = true;
   Map<String, int> _toneCounts = {};
-
 
   //For Calendar
   // DateTime _focusedDay = DateTime.now();
@@ -98,6 +97,125 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
     });
   }
   
+  // Generate a consistent color for each mood
+  Color _getMoodColor(String mood) {
+    // App's predefined moods with their colors
+    // Using text colors for dark backgrounds to ensure visibility
+    final Map<String, Color> predefinedMoods = {
+      'peaceful / gentle': Colors.blue.shade100,
+      'epic / heroic': Colors.orange.shade100,
+      'whimsical / surreal': Colors.purple.shade100,
+      'nightmarish / dark': Colors.orange.shade200, // Using text color since background is dark
+      'romantic / nostalgic': Colors.pink.shade100,
+      'ancient / mythic': Colors.brown.shade100,
+      'futuristic / uncanny': Colors.teal.shade100,
+      'elegant / ornate': Colors.indigo.shade100,
+    };
+    
+    // Normalize the mood string for comparison
+    final normalizedMood = mood.toLowerCase().trim();
+    
+    // Check for exact matches first
+    if (predefinedMoods.containsKey(normalizedMood)) {
+      return predefinedMoods[normalizedMood]!;
+    }
+    
+    // Check for partial matches (e.g., if mood contains "peaceful" or "gentle")
+    for (final entry in predefinedMoods.entries) {
+      final keywords = entry.key.split('/').map((k) => k.trim().toLowerCase());
+      if (keywords.any((keyword) => normalizedMood.contains(keyword))) {
+        return entry.value;
+      }
+    }
+    
+    // Otherwise generate a color based on the mood string
+    // Use a simple hash function to ensure the same mood always gets the same color
+    int hash = 0;
+    for (int i = 0; i < mood.length; i++) {
+      hash = mood.codeUnitAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Use the hash to generate a hue value between 0 and 360
+    final hue = (hash % 360).abs().toDouble();
+    
+    // Create a color with the hue and fixed saturation/brightness
+    // Using HSV color model for more vibrant colors
+    return HSVColor.fromAHSV(1.0, hue, 0.7, 0.9).toColor();
+  }
+  
+  // Build sorted mood bars
+  List<Widget> _buildSortedMoodBars() {
+    if (_toneCounts.isEmpty) {
+      return [const Text('No dream data available', style: TextStyle(color: Colors.white70))];
+    }
+    
+    // Sort entries by count (descending)
+    final sortedEntries = _toneCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    
+    // Create a list of mood bar widgets
+    return sortedEntries.map((entry) {
+      // Calculate percentage for the progress bar
+      final percentage = _dreamCount > 0 
+          ? entry.value / _dreamCount 
+          : 0.0;
+      
+      // Generate a color based on the mood name
+      final color = _getMoodColor(entry.key);
+      
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Row(
+          children: [
+            // Color indicator
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Mood name
+            Text(
+              entry.key,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontStyle: FontStyle.italic,
+                fontSize: 14,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(width: 8),
+            // Progress bar
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: percentage,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                  minHeight: 6,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Count only (no percentage)
+            Text(
+              "${entry.value}",
+              style: const TextStyle(
+                color: Colors.yellow,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
   @override
   void dispose() {
     widget.refreshTrigger.removeListener(_refreshJournal);
@@ -223,30 +341,10 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                ..._toneCounts.entries.map((entry) {
-                                  return RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: "${entry.key}: ",
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontStyle: FontStyle.italic, // 👈 mood in italics
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        TextSpan(
-                                          text: "${entry.value}",
-                                          style: const TextStyle(
-                                            color: Colors.yellow,       // 👈 count in yellow
-                                            fontWeight: FontWeight.bold, // 👈 bold count
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }),
+                                const SizedBox(height: 8),
+                                
+                                // Progress bars for each mood - more compact layout and sorted by count
+                                ..._buildSortedMoodBars(),
                               ],
 
                               const SizedBox(height: 10),

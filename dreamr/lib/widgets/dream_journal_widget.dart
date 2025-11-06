@@ -354,25 +354,28 @@ Rect _originFromKey(GlobalKey key) {
     );
   }
 
-    // Future<void> _shareDreamImage(Dream d) async {
-    // final f = await _resolveDreamImageFile(d);
-    // if (f == null || !await f.exists()) {
-    //   if (!mounted) return;
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(content: Text('Image not available to share')),
-    //   );
-    //   return;
-    // }
+    // Share just the dream image
+    Future<void> _shareDreamImage(Dream d) async {
+      final f = await _resolveDreamImageFile(d);
+      if (f == null || !await f.exists()) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image not available to share')),
+        );
+        return;
+      }
 
-  //   final mime = lookupMimeType(f.path) ?? 'image/jpeg';
+      final mime = lookupMimeType(f.path) ?? 'image/jpeg';
+      final origin = _originFromKey(_shareAnchorKey);
 
-  //   await SharePlus.instance.share(
-  //     ShareParams(
-  //       text: d.summary.isNotEmpty ? d.summary : null,
-  //       files: [XFile(f.path, mimeType: mime, name: f.uri.pathSegments.last)],
-  //     ),
-  //   );
-  // }
+      await SharePlus.instance.share(
+        ShareParams(
+          title: d.summary.isNotEmpty ? d.summary : null,
+          files: [XFile(f.path, mimeType: mime, name: f.uri.pathSegments.last)],
+          sharePositionOrigin: origin,
+        ),
+      );
+    }
   
 // Load dreams from API
   Future<void> _loadDreams() async {
@@ -730,25 +733,46 @@ Rect _originFromKey(GlobalKey key) {
                                   ),
                                   const SizedBox(width: 8),
 
-                                  // Share Dream
-                                  Container(
+                                  // Share button with popup menu - fixed implementation
+                                  Material(
                                     key: _shareAnchorKey,
-                                    child: ElevatedButton.icon(
-                                      onPressed: () => _shareDream(dream),
-                                      icon: const Icon(Icons.share, size: 16),
-                                      label: const Text('Share ✨'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Color.fromARGB(255, 75, 3, 143),
-                                        foregroundColor: Colors.white,
+                                    color: const Color.fromARGB(255, 75, 3, 143),
+                                    borderRadius: BorderRadius.circular(10),
+                                    elevation: 0,
+                                    child: PopupMenuButton<String>(
+                                      tooltip: 'Share',
+                                      offset: const Offset(0, 30),
+                                      onSelected: (v) {
+                                        if (v == 'with_text') {
+                                          _shareDream(dream);
+                                        } else if (v == 'image_only') {
+                                          _shareDreamImage(dream);
+                                        }
+                                      },
+                                      itemBuilder: (ctx) => const [
+                                        PopupMenuItem(value: 'with_text', child: Text('Share dream + image')),
+                                        PopupMenuItem(value: 'image_only', child: Text('Share image only')),
+                                      ],
+                                      child: Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                        minimumSize: const Size(0, 0),
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                                        elevation: 0,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: const [
+                                            Icon(Icons.share, size: 16, color: Colors.white),
+                                            SizedBox(width: 6),
+                                            Text(
+                                              'Share ✨',
+                                              style: TextStyle(
+                                                fontSize: 13, 
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  )
+                                  ),
                                 ],
                               )
 
