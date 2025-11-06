@@ -2,4 +2,5 @@
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
     <color name="splash_background">#FF0F023D</color>
+	<color name="ic_launcher_background">#121212</color>
 </resources>
