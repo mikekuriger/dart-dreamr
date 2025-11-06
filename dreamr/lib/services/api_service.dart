@@ -1,6 +1,7 @@
 // services/api_service.dart
 // import 'dart:convert';
 import 'package:dreamr/models/dream.dart';
+import 'package:dreamr/models/subscription.dart';
 import 'dio_client.dart';
 import 'package:dio/dio.dart';
 import 'package:dreamr/constants.dart';
@@ -150,6 +151,92 @@ class ApiService {
       return {'authenticated': false};
     }
     return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  // Get user's subscription status
+  static Future<SubscriptionStatus> getSubscriptionStatus() async {
+    try {
+      final res = await DioClient.dio.get('/api/subscription/status',
+        options: Options(validateStatus: (status) => status == 200),
+      );
+      return SubscriptionStatus.fromJson(res.data);
+    } catch (e) {
+      // If there's an error, return a default free tier status
+      return SubscriptionStatus.free();
+    }
+  }
+
+  // Get available subscription plans
+  static Future<List<SubscriptionPlan>> getSubscriptionPlans() async {
+    try {
+      logd('Fetching subscription plans from API...');
+      final res = await DioClient.dio.get('/api/subscription/plans',
+        options: Options(validateStatus: (status) => status == 200),
+      );
+      logd('API response status: ${res.statusCode}');
+      logd('API response data: ${res.data}');
+      
+      if (res.data is! List) {
+        logd('ERROR: API response is not a list. Type: ${res.data.runtimeType}');
+        return [];
+      }
+      
+      final List<dynamic> plansJson = res.data;
+      logd('Number of plans in response: ${plansJson.length}');
+      
+      if (plansJson.isNotEmpty) {
+        logd('First plan data: ${plansJson.first}');
+      }
+      
+      try {
+        final plans = plansJson.map((json) => SubscriptionPlan.fromJson(json)).toList();
+        logd('Successfully parsed ${plans.length} plans');
+        return plans;
+      } catch (parseError) {
+        logd('Error parsing subscription plans: $parseError');
+        return [];
+      }
+    } catch (e) {
+      logd('Error fetching subscription plans: $e');
+      // Return empty list if there's an error
+      return [];
+    }
+  }
+
+  // Initiate a subscription purchase
+  // This would typically return information needed to complete the purchase
+  // such as a payment URL or transaction ID
+  static Future<Map<String, dynamic>> initiateSubscription(String planId) async {
+    final res = await DioClient.dio.post('/api/subscription/purchase',
+      data: {'plan_id': planId},
+      options: Options(validateStatus: (status) => status == 200),
+    );
+    return Map<String, dynamic>.from(res.data);
+  }
+
+  // Cancel a subscription
+  static Future<bool> cancelSubscription() async {
+    try {
+      final res = await DioClient.dio.post('/api/subscription/cancel',
+        options: Options(validateStatus: (status) => status == 200),
+      );
+      return res.data['success'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Update payment method
+  static Future<bool> updatePaymentMethod(Map<String, dynamic> paymentDetails) async {
+    try {
+      final res = await DioClient.dio.post('/api/subscription/payment-method',
+        data: paymentDetails,
+        options: Options(validateStatus: (status) => status == 200),
+      );
+      return res.data['success'] == true;
+    } catch (e) {
+      return false;
+    }
   }
 
   // Request password reset
@@ -483,6 +570,7 @@ class ApiService {
         'timezone':   (data['timezone'] ?? '').toString(),
         'avatar_url': (data['avatar_url'] ?? '').toString(),
         'enable_audio': data['enable_audio'] ?? '',
+        'subscription_tier': data['subscription_tier'] ?? 'free',
       };
     } else {
       throw Exception('Profile fetch failed: ${response.statusMessage}');

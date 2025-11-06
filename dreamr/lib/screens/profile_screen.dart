@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:dreamr/theme/colors.dart';
 import 'package:dreamr/services/api_service.dart';
+import 'package:provider/provider.dart';
+import 'package:dreamr/state/subscription_model.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ValueNotifier<int> refreshTrigger;
@@ -20,6 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _gender;
   DateTime? _birthdate;
   bool _enableAudio = false;
+  String _subscriptionTier = 'free';
 
   bool _loading = true;
 
@@ -40,6 +43,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ? DateTime.parse(data['birthdate'])
             : null;
         _enableAudio = data['enable_audio'] == true || data['enable_audio'] == '1';
+        _subscriptionTier = data['subscription_tier'] ?? 'free';
         _loading = false;
       });
     } catch (e) {
@@ -114,6 +118,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
+
+                  // 💎 SUBSCRIPTION SECTION
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: AppColors.purple800,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              _subscriptionTier == 'free' ? Icons.star_border : Icons.star,
+                              color: _subscriptionTier == 'free' ? Colors.grey : Colors.amber,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Subscription: ${_subscriptionTier.toUpperCase()}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pushNamed('/subscription');
+                            },
+                            icon: const Icon(Icons.card_membership, size: 18),
+                            label: const Text('Manage Subscription'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.deepPurpleAccent,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
                   // 🖼️ AVATAR (future)
                   // CircleAvatar(

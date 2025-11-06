@@ -27,7 +27,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscure = true;
   String? _error;
 
-  // Google sign-in
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
     serverClientId: kWebClientId,
@@ -68,10 +67,11 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainScaffold(initialIndex: 0)),   // <- where user lands upon loggin in - 0=journal, 1=dream entry, 2=gallery, etc.
-      );
+              // Navigate to main scaffold
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const MainScaffold(initialIndex: 0)),   // <- where user lands upon loggin in - 0=journal, 1=dream entry, 2=gallery, etc.
+              );
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
       setState(() => _error = msg);
@@ -94,37 +94,52 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final account = await _googleSignIn.signIn();
-      if (account == null) {
-        setState(() => _error = 'Google sign-in cancelled');
-        return;
-      }
-      final auth = await account.authentication;
-      final token = auth.idToken;
-      if (token == null || token.isEmpty) {
-        setState(() => _error = 'Google authentication failed (no token)');
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        // User canceled the sign-in flow
+        setState(() => _loading = false);
         return;
       }
 
-      await ApiService.googleLogin(token);
+      final googleAuth = await googleUser.authentication;
+      final token = googleAuth.idToken;
 
+      if (token == null) {
+        throw Exception('Failed to get ID token from Google');
+      }
+
+      // Send token to backend for verification and login
+      final user = await ApiService.googleLogin(token);
+
+      // Store login method and token
       await _secure.write(key: 'login_method', value: 'google');
-      // optional: clear any old email/password so you don't accidentally try both paths later
-      await _secure.delete(key: 'email');
-      await _secure.delete(key: 'password');
+      await _secure.write(key: 'google_token', value: token);
 
-      
+      // Set login flag
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('loggedIn', true);
-      
+      if (user['id'] is int) {
+        await prefs.setInt('userId', user['id']);
+      }
+
       if (!mounted) return;
+      // Navigate to main scaffold
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const MainScaffold(initialIndex: 0)),   // <- where user lands upon loggin in - 0=journal, 1=dream entry, 2=gallery, etc.
+        MaterialPageRoute(builder: (_) => const MainScaffold(initialIndex: 0)),
       );
     } catch (e) {
+      // Handle sign-in errors
       final msg = e.toString().replaceFirst('Exception: ', '');
-      setState(() => _error = msg.isEmpty ? 'Google login failed' : msg);
+      setState(() => _error = msg);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
+        );
+      }
+      
+      // Sign out to clean up any partial sign-in state
+      _googleSignIn.signOut();
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -328,6 +343,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
+              
+              // Subscription promo removed as requested
             ],
           ),
         ),

@@ -131,8 +131,8 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    // color: const Color.fromARGB(255, 20, 0, 68),
-                    color: AppColors.purple850,
+                    color: const Color.fromARGB(255, 0, 0, 0).withOpacity(.4),  
+                    // color: AppColors.purple850,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(

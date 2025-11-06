@@ -33,12 +33,13 @@ dependencies:
   flutter_svg: ^2.0.9
 # for local storage
   path: ^1.9.0
-# other stuff
-  table_calendar: ^3.0.9
-  lottie: ^3.3.1
-  google_sign_in: ^6.1.5
+# end sharing packages
+
+
+  # The following adds the Cupertino Icons font to your application.
   flutter:
     sdk: flutter
+  in_app_purchase: ^3.1.13
   http: ^1.2.0
   flutter_timezone: ^4.1.1
   flutter_secure_storage: ^9.2.4
@@ -49,6 +50,7 @@ dependencies:
   just_audio: ^0.9.36
   audio_session: ^0.1.16
   cached_network_image: ^3.3.1
+  google_sign_in: ^6.2.1
 # Cache
   flutter_cache_manager: ^3.3.1
 # Sharing images to social media
@@ -81,7 +83,7 @@ dependency_overrides:
   
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4
-  flutter_native_splash: ^2.3.5
+  flutter_native_splash: ^2.4.1
   flutter_test:
     sdk: flutter
   # The "flutter_lints" package below contains a set of recommended lints to
@@ -95,13 +97,24 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/icon.jpg"
+  remove_alpha_ios: true
+  image_path: "assets/images/icon.png"
+  # Android 13+ adaptive + monochrome
+  adaptive_icon_background: "#121212"     # or a bg image path
+  adaptive_icon_foreground: assets/images/icon.png
+  min_sdk_android: 21
 
 flutter_native_splash:
   color: "#0F023D"  # This is fine (ARGB format supported)
   image: assets/images/icon.png  # Use this for Android < 12 and iOS
+  # branding: assets/splash/brand.png
   android: true
   ios: true
+  android_12:
+    color: "#121212"
+    image: assets/images/icon.png
+    icon_background_color: "#121212"
+  
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -116,7 +129,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/images/icon.jpg
+    #- assets/images/icon.jpg
     - assets/images/icon.png
     - assets/images/decline.png
     - assets/images/question2.png

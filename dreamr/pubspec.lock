@@ -408,6 +408,38 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.5.4"
+  in_app_purchase:
+    dependency: "direct main"
+    description:
+      name: in_app_purchase
+      sha256: "5cddd7f463f3bddb1d37a72b95066e840d5822d66291331d7f8f05ce32c24b6c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.2.3"
+  in_app_purchase_android:
+    dependency: transitive
+    description:
+      name: in_app_purchase_android
+      sha256: "2d0e2d27b93bd7457526419d7feb07baf5608d733ecf6cdcd2e3b03ea7248915"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.0+6"
+  in_app_purchase_platform_interface:
+    dependency: transitive
+    description:
+      name: in_app_purchase_platform_interface
+      sha256: "1d353d38251da5b9fea6635c0ebfc6bb17a2d28d0e86ea5e083bf64244f1fb4c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.0"
+  in_app_purchase_storekit:
+    dependency: transitive
+    description:
+      name: in_app_purchase_storekit
+      sha256: dab4feef532af88ddec22200e4b3809c02c9bd0da3d0864f3e8e0f7b02f95867
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.6"
   intl:
     dependency: "direct main"
     description:
@@ -488,14 +520,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
-  lottie:
-    dependency: "direct main"
-    description:
-      name: lottie
-      sha256: "8ae0be46dbd9e19641791dc12ee480d34e1fd3f84c749adc05f3ad9342b71b95"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.3.2"
   markdown:
     dependency: transitive
     description:
@@ -736,14 +760,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.1"
-  simple_gesture_detector:
-    dependency: transitive
-    description:
-      name: simple_gesture_detector
-      sha256: ba2cd5af24ff20a0b8d609cec3f40e5b0744d2a71804a2616ae086b9c19d19a3
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.2.1"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -837,14 +853,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.4.0"
-  table_calendar:
-    dependency: "direct main"
-    description:
-      name: table_calendar
-      sha256: "0c0c6219878b363a2d5f40c7afb159d845f253d061dc3c822aa0d5fe0f721982"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.2.0"
   term_glyph:
     dependency: transitive
     description:

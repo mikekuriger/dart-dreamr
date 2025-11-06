@@ -1,8 +1,12 @@
+// screens/splash_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dreamr/services/api_service.dart';
 import 'package:dreamr/widgets/main_scaffold.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:dreamr/constants.dart';
+import 'package:provider/provider.dart';
+import 'package:dreamr/state/subscription_model.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,10 +17,15 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   final _storage = const FlutterSecureStorage();
+  late final GoogleSignIn _googleSignIn;
 
   @override
   void initState() {
     super.initState();
+    _googleSignIn = GoogleSignIn(
+      scopes: ['email', 'profile'],
+      serverClientId: kWebClientId,
+    );
     _attemptAutoLogin();
   }
 
@@ -25,26 +34,37 @@ class _SplashScreenState extends State<SplashScreen> {
       final loginMethod = await _storage.read(key: 'login_method');
 
       if (loginMethod == 'google') {
-        try {
-          final googleUser = await GoogleSignIn().signInSilently();
-
-          if (googleUser != null) {
-            final auth = await googleUser.authentication;
-            final idToken = auth.idToken;
-
-            if (idToken != null) {
-              await ApiService.googleLogin(idToken);
-
-              if (!mounted) return;
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const MainScaffold()),
-              );
-              return;
+        final token = await _storage.read(key: 'google_token');
+        if (token != null) {
+          try {
+            // Try to sign in silently with Google
+            final googleUser = await _googleSignIn.signInSilently();
+            if (googleUser != null) {
+              final googleAuth = await googleUser.authentication;
+              final idToken = googleAuth.idToken;
+              
+              if (idToken != null) {
+                // Authenticate with backend
+                await ApiService.googleLogin(idToken);
+                
+                // Update stored token
+                await _storage.write(key: 'google_token', value: idToken);
+                
+                // Initialize subscription state before navigating
+                await _initializeSubscription();
+                
+                if (!mounted) return;
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MainScaffold()),
+                );
+                return;
+              }
             }
+          } catch (e) {
+            debugPrint('❌ Google auto-login failed: $e');
+            // Fall through to next login method
           }
-        } catch (e) {
-          // ignore and fall back to manual login
         }
       }
 
@@ -53,6 +73,10 @@ class _SplashScreenState extends State<SplashScreen> {
       if (email != null && password != null) {
         try {
           await ApiService.login(email, password);
+          
+          // Initialize subscription state before navigating
+          await _initializeSubscription();
+          
           if (!mounted) return;
           Navigator.pushReplacement(
             context,
@@ -76,6 +100,20 @@ class _SplashScreenState extends State<SplashScreen> {
       }
     }
   }
+  // Initialize subscription state
+  Future<void> _initializeSubscription() async {
+    try {
+      // Get the subscription model from the provider
+      final subscriptionModel = Provider.of<SubscriptionModel>(context, listen: false);
+      
+      // Initialize and refresh subscription data
+      await subscriptionModel.refresh();
+    } catch (e) {
+      debugPrint('❌ Failed to initialize subscription: $e');
+      // Continue anyway - subscription will be initialized later
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     return const Scaffold(

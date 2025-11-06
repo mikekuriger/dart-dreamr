@@ -6,6 +6,9 @@ import 'package:dreamr/screens/image_viewer_screen.dart';
 import 'package:dreamr/constants.dart';
 import 'package:dreamr/widgets/dream_image.dart';
 import 'package:dreamr/services/image_store.dart';
+import 'package:dreamr/state/subscription_model.dart';
+import 'package:dreamr/screens/subscription_screen.dart';
+import 'package:provider/provider.dart';
 
 
 

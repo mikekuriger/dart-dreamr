@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:dreamr/models/subscription.dart';
 import 'package:dreamr/screens/splash_screen.dart';
 import 'package:dreamr/screens/login_screen.dart';
 import 'package:dreamr/screens/register_screen.dart';
@@ -11,6 +12,7 @@ import 'package:dreamr/screens/dream_journal_editor_screen.dart';
 import 'package:dreamr/screens/dream_gallery_screen.dart';
 import 'package:dreamr/screens/forgot_password_screen.dart';
 import 'package:dreamr/screens/profile_screen.dart';
+import 'package:dreamr/screens/subscription_screen.dart';
 
 import 'package:dreamr/services/dio_client.dart';
 import 'package:dreamr/theme/colors.dart';
@@ -18,6 +20,7 @@ import 'package:dreamr/constants.dart';
 
 import 'package:dreamr/repository/dream_repository.dart';
 import 'package:dreamr/state/dream_list_model.dart';
+import 'package:dreamr/state/subscription_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +33,9 @@ void main() async {
         ChangeNotifierProvider<DreamListModel>(
           // includeHidden: true if you want hidden entries in the list model
           create: (ctx) => DreamListModel(repo: ctx.read<DreamRepository>())..init(),
+        ),
+        ChangeNotifierProvider<SubscriptionModel>(
+          create: (_) => SubscriptionModel()..init(),
         ),
       ],
       child: const DreamrApp(),
@@ -59,6 +65,7 @@ class DreamrApp extends StatelessWidget {
         '/image': (context) => const Placeholder(),
         '/profile': (context) => ProfileScreen(refreshTrigger: profileRefreshTrigger),
         '/forgot-password': (_) => const ForgotPasswordScreen(),
+        '/subscription': (context) => const SubscriptionScreen(),
       },
     );
   }
