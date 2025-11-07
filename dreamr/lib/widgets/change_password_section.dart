@@ -79,7 +79,7 @@ class _ChangePasswordSectionState extends State<ChangePasswordSection> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: Colors.white.withOpacity(0.06),
+      color: Colors.white.withValues(alpha: 0.06),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -106,8 +106,8 @@ class _ChangePasswordSectionState extends State<ChangePasswordSection> {
                 padding: const EdgeInsets.all(10),
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.15),
-                  border: Border.all(color: Colors.red.withOpacity(0.35)),
+                  color: Colors.red.withValues(alpha: 0.15),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.35)),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(_error!, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
@@ -118,8 +118,8 @@ class _ChangePasswordSectionState extends State<ChangePasswordSection> {
                 padding: const EdgeInsets.all(10),
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.18),
-                  border: Border.all(color: Colors.green.withOpacity(0.35)),
+                  color: Colors.green.withValues(alpha: 0.18),
+                  border: Border.all(color: Colors.green.withValues(alpha: 0.35)),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text('Password changed successfully', style: TextStyle(color: Colors.green)),

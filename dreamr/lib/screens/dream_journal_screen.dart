@@ -249,6 +249,10 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                     color: const Color.fromARGB(255, 0, 0, 0).withValues(alpha: 0.45),
                     // color: AppColors.purple850,
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color.fromARGB(255, 170, 153, 1),
+                      width: 2,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,14 +261,36 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            "✨ Stats",
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                           RichText(
+                                text: TextSpan(
+                                  children: [
+                                    const TextSpan(
+                                      text: "✨ Dreams Logged: ",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.normal,
+                                        // fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: '$_dreamCount',
+                                      style: const TextStyle(
+                                        color: Colors.yellow,
+                                        fontWeight: FontWeight.bold,
+                                        // fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          // Text(
+                          //   "✨ Dreams Logged: $_dreamCount",
+                          //   style: const TextStyle(
+                          //     fontSize: 16,
+                          //     color: Colors.white,
+                          //     fontWeight: FontWeight.bold,
+                          //   ),
+                          // ),
                           Icon(
                             _statsExpanded ? Icons.expand_less : Icons.expand_more,
                             color: Colors.white, // ✅ white icon
@@ -284,28 +310,28 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              RichText(
-                                text: TextSpan(
-                                  children: [
-                                    const TextSpan(
-                                      text: "Dreams Logged: ",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.normal,
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                    ),
-                                    TextSpan(
-                                      text: '$_dreamCount',
-                                      style: const TextStyle(
-                                        color: Colors.yellow,
-                                        fontWeight: FontWeight.bold,
-                                        // fontSize: 16,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              // RichText(
+                              //   text: TextSpan(
+                              //     children: [
+                              //       const TextSpan(
+                              //         text: "Dreams Logged: ",
+                              //         style: TextStyle(
+                              //           color: Colors.white,
+                              //           fontWeight: FontWeight.normal,
+                              //           fontStyle: FontStyle.italic,
+                              //         ),
+                              //       ),
+                              //       TextSpan(
+                              //         text: '$_dreamCount',
+                              //         style: const TextStyle(
+                              //           color: Colors.yellow,
+                              //           fontWeight: FontWeight.bold,
+                              //           // fontSize: 16,
+                              //         ),
+                              //       ),
+                              //     ],
+                              //   ),
+                              // ),
                               RichText(
                                 text: TextSpan(
                                   children: [

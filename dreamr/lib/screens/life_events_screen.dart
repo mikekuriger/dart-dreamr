@@ -153,7 +153,7 @@ class _LifeEventsScreenState extends State<LifeEventsScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.45),
+                      color: const Color.fromARGB(255, 0, 0, 0).withValues(alpha: 0.45),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(

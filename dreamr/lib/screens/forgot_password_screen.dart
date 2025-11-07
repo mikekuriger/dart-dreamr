@@ -58,8 +58,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               padding: const EdgeInsets.all(12),
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.18),
-                border: Border.all(color: Colors.green.withOpacity(0.35)),
+                color: Colors.green.withValues(alpha: 0.18),
+                border: Border.all(color: Colors.green.withValues(alpha: 0.35)),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(_msg!, style: const TextStyle(color: Colors.green)),

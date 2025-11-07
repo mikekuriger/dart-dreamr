@@ -247,8 +247,8 @@ class LifeEventWidgetState extends State<LifeEventWidget> {
                                     final tagColor = _getTagColor(tag);
                                     return Chip(
                                       label: Text(tag),
-                                      backgroundColor: tagColor.withOpacity(0.2),
-                                      labelStyle: TextStyle(color: tagColor.withOpacity(0.8)),
+                                      backgroundColor: tagColor.withValues(alpha: 0.2),
+                                      labelStyle: TextStyle(color: tagColor.withValues(alpha: 0.8)),
                                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                       padding: EdgeInsets.zero,
                                     );

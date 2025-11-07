@@ -1,5 +1,4 @@
 // models/subscription.dart
-import 'package:flutter/foundation.dart';
 
 /// Represents a subscription plan in the app
 class SubscriptionPlan {

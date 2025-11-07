@@ -108,8 +108,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.purple950,  // overall screen background color
-      // backgroundColor: AppColors.purple900,  // overall screen background color
+      backgroundColor: AppColors.purple900,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,6 +169,39 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             );
           }
           
+          // Filter out the free trial plan from display
+          final proPlans = model.plans.where((plan) => 
+            !plan.name.toLowerCase().contains('trial') && 
+            !plan.description.toLowerCase().contains('free trial')).toList();
+
+          // Separate monthly and yearly plans
+          final monthlyPlan = proPlans.firstWhere(
+            (plan) => plan.period.toLowerCase() == 'monthly', 
+            orElse: () => proPlans.isEmpty ? SubscriptionPlan(
+              id: '',
+              name: 'Monthly',
+              description: '',
+              price: 0.0,
+              period: 'monthly',
+              features: [],
+            ) : proPlans.first,
+          );
+          
+          final yearlyPlan = proPlans.firstWhere(
+            (plan) => plan.period.toLowerCase() == 'yearly',
+            orElse: () => proPlans.isEmpty ? SubscriptionPlan(
+              id: '',
+              name: 'Yearly',
+              description: '',
+              price: 0.0,
+              period: 'yearly',
+              features: [],
+            ) : proPlans.last,
+          );
+
+          // Get features from one of the pro plans (they should be identical)
+          final proFeatures = monthlyPlan.features.isNotEmpty ? monthlyPlan.features : yearlyPlan.features;
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -208,37 +240,50 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     ),
                   ],
                   
+                  // Spacing          
                   const SizedBox(height: 24),
-                
-                // Available plans
-                const Text(
-                  'Available Plans',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                
-                const SizedBox(height: 16),
-                
-                // Plan cards (excluding free plans)
-                ...model.plans
-                    .where((plan) => plan.id != 'trial_5day')
-                    .map((plan) => _buildPlanCard(plan, model.status)),
-                
-                // Show a message if no plans are available
-                if (model.plans.isEmpty)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text(
-                        'No subscription plans available at the moment.',
-                        style: TextStyle(color: Colors.white70),
-                        textAlign: TextAlign.center,
-                      ),
+                  
+                  // Available plans
+                  const Text(
+                    'Dreamr ✨ Pro',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    monthlyPlan.description,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                  ),
+                  
+                  // Spacing          
+                  const SizedBox(height: 16),
+                  
+                  // Pro features with subscription buttons
+                  _buildProFeaturesCard(
+                    features: proFeatures, 
+                    currentStatus: model.status, 
+                    monthlyPlan: monthlyPlan,
+                    yearlyPlan: yearlyPlan,
+                  ),
+                  
+                  // Show a message if no plans are available
+                  if (proPlans.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          'No subscription plans available at the moment.',
+                          style: TextStyle(color: Colors.white70),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
               ],
             ),
           );
@@ -255,11 +300,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isActive ? AppColors.purple800 : Colors.grey.shade800,  // current subscription card color
+        color: isActive ? AppColors.purple800 : Colors.grey.shade800,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: Colors.black.withOpacity(0.2),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -342,114 +387,141 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
-  // Build a subscription plan card
-  Widget _buildPlanCard(SubscriptionPlan plan, SubscriptionStatus currentStatus) {
-    final bool isCurrentPlan = currentStatus.tier == plan.id && currentStatus.isActive;
+  // Build pro features card with darker background and subscription buttons
+  Widget _buildProFeaturesCard({
+    required List<String> features, 
+    required SubscriptionStatus currentStatus,
+    required SubscriptionPlan monthlyPlan,
+    required SubscriptionPlan yearlyPlan,
+  }) {
+    final bool isCurrentMonthly = currentStatus.tier == monthlyPlan.id && currentStatus.isActive;
+    final bool isCurrentYearly = currentStatus.tier == yearlyPlan.id && currentStatus.isActive;
+    final int savingsPercentage = ((1 - (yearlyPlan.price / 12) / monthlyPlan.price) * 100).round();
     
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: isCurrentPlan ? const Color.fromARGB(255, 0, 0, 0) : AppColors.purple900,    // plan card color
+        color: Colors.black, // Darker background as requested
         borderRadius: BorderRadius.circular(12),
-        border: isCurrentPlan
-            ? Border.all(color: Colors.amber, width: 2)
-            : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: Colors.black.withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Plan header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isCurrentPlan ? const Color.fromARGB(255, 196, 29, 0) : AppColors.purple800,   //plan header color
-              // color: isCurrentPlan ? AppColors.purple800 : AppColors.purple850,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(10),
-                topRight: Radius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '✨ Pro Features',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  plan.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+            
+            const SizedBox(height: 16),
+            
+            // Features list with dark background
+            ...features.map((feature) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                    size: 18,
                   ),
-                ),
-                Text(
-                  _formatPrice(plan.price, plan.period),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Plan details
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  plan.description,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
-                ),
-                
-                const SizedBox(height: 16),
-                
-                // Features list
-                ...plan.features.map((feature) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                        size: 16,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      feature,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          feature,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                          ),
+                    ),
+                  ),
+                ],
+              ),
+            )),
+            
+            const SizedBox(height: 24),
+            
+            // Monthly subscription button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: isCurrentMonthly || _loading
+                    ? null
+                    : () => _subscribe(monthlyPlan),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurpleAccent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  disabledBackgroundColor: Colors.grey.shade700,
+                ),
+                child: _loading && !isCurrentYearly
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        isCurrentMonthly ? 'Current Plan' : '\$4.99/month',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ],
-                  ),
-                )),
-                
-                const SizedBox(height: 16),
-                
-                // Subscribe button
+              ),
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Yearly subscription button with savings badge
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.amber,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Save $savingsPercentage%',
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: isCurrentPlan || _loading
+                    onPressed: isCurrentYearly || _loading
                         ? null
-                        : () => _subscribe(plan),
+                        : () => _subscribe(yearlyPlan),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurpleAccent,
                       foregroundColor: Colors.white,
@@ -459,7 +531,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       ),
                       disabledBackgroundColor: Colors.grey.shade700,
                     ),
-                    child: _loading
+                    child: _loading && !isCurrentMonthly
                         ? const SizedBox(
                             width: 20,
                             height: 20,
@@ -469,7 +541,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                             ),
                           )
                         : Text(
-                            isCurrentPlan ? 'Current Plan' : 'Subscribe',
+                            isCurrentYearly ? 'Current Plan' : '\$49.99/year',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -479,8 +551,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
