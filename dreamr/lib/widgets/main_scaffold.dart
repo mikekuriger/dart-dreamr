@@ -7,6 +7,8 @@ import 'package:dreamr/screens/dream_journal_screen.dart';
 import 'package:dreamr/screens/dream_journal_editor_screen.dart';
 import 'package:dreamr/screens/dream_gallery_screen.dart';
 import 'package:dreamr/screens/profile_screen.dart';
+import 'package:dreamr/screens/subscription_screen.dart';
+import 'package:dreamr/screens/life_events_screen.dart';
 import 'package:dreamr/constants.dart';
 import 'package:dreamr/utils/session_manager.dart';
 
@@ -164,6 +166,22 @@ class _MainScaffoldState extends State<MainScaffold> {
                     _selectedIndex = 4; 
                   });
                   break;
+                case '/subscription':
+                  Navigator.push(
+                    context, 
+                    MaterialPageRoute(
+                      builder: (context) => const SubscriptionScreen(),
+                    ),
+                  );
+                  break;
+                case '/life-events':
+                  Navigator.push(
+                    context, 
+                    MaterialPageRoute(
+                      builder: (context) => const LifeEventsScreen(),
+                    ),
+                  );
+                  break;
                 case '/login':
                   Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
                   break;
@@ -174,16 +192,24 @@ class _MainScaffoldState extends State<MainScaffold> {
             },
             itemBuilder: (BuildContext context) => [
               const PopupMenuItem(
-                value: 'logout',
-                child: Text('Logout', style: TextStyle(color: Colors.white)),
+                value: '/editor',
+                child: Text('Hide/Delete', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
                 value: '/profile',
                 child: Text('Profile', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
-                value: '/editor',
-                child: Text('Hide/Delete', style: TextStyle(color: Colors.white)),
+                value: '/subscription',
+                child: Text('Subscription', style: TextStyle(color: Colors.white)),
+              ),
+              const PopupMenuItem(
+                value: '/life-events',
+                child: Text('Life Events', style: TextStyle(color: Colors.white)),
+              ),
+              const PopupMenuItem(
+                value: 'logout',
+                child: Text('Logout', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),

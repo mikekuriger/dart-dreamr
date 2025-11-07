@@ -1,6 +1,7 @@
 // services/api_service.dart
 // import 'dart:convert';
 import 'package:dreamr/models/dream.dart';
+import 'package:dreamr/models/life_event.dart';
 import 'package:dreamr/models/subscription.dart';
 import 'dio_client.dart';
 import 'package:dio/dio.dart';
@@ -619,6 +620,204 @@ class ApiService {
     return response.data;
   }
 
+  // --- Life Events API Methods ---
+
+  // Fetch all life events
+  static Future<List<LifeEvent>> fetchLifeEvents() async {
+    try {
+      debugPrint('Fetching life events from API');
+      final response = await DioClient.dio.get('/api/life-events',
+        options: Options(validateStatus: (status) => true),
+      );
+
+      debugPrint('Fetch life events response status: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        if (response.data == null) {
+          debugPrint('API returned null data for life events');
+          return [];
+        }
+        
+        // Backend returns { items: [...] } structure
+        if (response.data is Map && response.data['items'] != null) {
+          final List items = response.data['items'];
+          debugPrint('API returned ${items.length} life events in items array');
+          
+          try {
+            final events = items.map((json) => LifeEvent.fromJson(json)).toList();
+            debugPrint('Successfully parsed ${events.length} life events');
+            return events;
+          } catch (parseError, stackTrace) {
+            debugPrint('Error parsing life events: $parseError');
+            debugPrint('Stack trace: $stackTrace');
+            debugPrint('Response data sample: ${items.isNotEmpty ? items[0] : "empty"}');
+            return [];
+          }
+        } else {
+          debugPrint('API returned unexpected data structure: ${response.data.runtimeType}');
+          return [];
+        }
+      } else {
+        debugPrint('Failed to fetch life events: ${response.statusCode} - ${response.statusMessage}');
+        debugPrint('Response data: ${response.data}');
+        return []; // Return empty list instead of throwing to avoid crashing
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Exception fetching life events: $e');
+      debugPrint('Stack trace: $stackTrace');
+      return []; // Return empty list on error
+    }
+  }
+
+  // Create a new life event
+  static Future<LifeEvent?> createLifeEvent({
+    required DateTime occurredAt,
+    required String title,
+    String? details,
+    List<String>? tags,
+  }) async {
+    try {
+      debugPrint('Creating life event: $title');
+      
+      final Map<String, dynamic> data = {
+        'occurred_at': occurredAt.toIso8601String(),
+        'title': title,
+      };
+      
+      // Add optional fields only if they have values
+      if (details != null && details.isNotEmpty) {
+        data['details'] = details;
+      }
+      
+      if (tags != null && tags.isNotEmpty) {
+        data['tags'] = tags;  // Send as array, not comma-separated string
+      }
+      
+      debugPrint('API request data: $data');
+      
+      final response = await DioClient.dio.post(
+        '/api/life-events',
+        data: data,
+        options: Options(
+          contentType: Headers.jsonContentType,
+          validateStatus: (status) => true, // Handle all status codes
+        ),
+      );
+
+      debugPrint('Create life event response status: ${response.statusCode}');
+      
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        if (response.data == null) {
+          debugPrint('API returned null data after creating life event');
+          return null;
+        }
+        
+        debugPrint('Life event created successfully, response: ${response.data}');
+        
+        try {
+          final lifeEvent = LifeEvent.fromJson(response.data);
+          debugPrint('Successfully parsed created life event with ID: ${lifeEvent.id}');
+          return lifeEvent;
+        } catch (parseError) {
+          debugPrint('Error parsing created life event: $parseError');
+          debugPrint('Response data: ${response.data}');
+          return null; // Return null instead of throwing
+        }
+      } else {
+        debugPrint('Failed to create life event: ${response.statusCode} - ${response.statusMessage}');
+        debugPrint('Response data: ${response.data}');
+        return null; // Return null instead of throwing
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Exception creating life event: $e');
+      debugPrint('Stack trace: $stackTrace');
+      return null; // Return null instead of throwing
+    }
+  }
+
+  // Update an existing life event
+  static Future<LifeEvent?> updateLifeEvent({
+    required int id,
+    DateTime? occurredAt,
+    String? title,
+    String? details,
+    List<String>? tags,
+  }) async {
+    try {
+      debugPrint('Updating life event ID: $id');
+      
+      final Map<String, dynamic> data = {};
+      if (occurredAt != null) data['occurred_at'] = occurredAt.toIso8601String();
+      if (title != null && title.isNotEmpty) data['title'] = title;
+      if (details != null) data['details'] = details; // Can be empty to clear
+      if (tags != null) data['tags'] = tags; // Send as array, not comma-separated
+      
+      debugPrint('API update data: $data');
+
+      final response = await DioClient.dio.patch(
+        '/api/life-events/$id',
+        data: data,
+        options: Options(
+          contentType: Headers.jsonContentType,
+          validateStatus: (status) => true,
+        ),
+      );
+
+      debugPrint('Update life event response status: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        if (response.data == null) {
+          debugPrint('API returned null data after updating life event');
+          return null;
+        }
+        
+        try {
+          final updated = LifeEvent.fromJson(response.data);
+          debugPrint('Successfully updated and parsed life event');
+          return updated;
+        } catch (parseError) {
+          debugPrint('Error parsing updated life event: $parseError');
+          debugPrint('Response data: ${response.data}');
+          return null; // Return null instead of throwing
+        }
+      } else {
+        debugPrint('Failed to update life event: ${response.statusCode} - ${response.statusMessage}');
+        debugPrint('Response data: ${response.data}');
+        return null; // Return null instead of throwing
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Exception updating life event: $e');
+      debugPrint('Stack trace: $stackTrace');
+      return null; // Return null instead of throwing
+    }
+  }
+
+  // Delete a life event
+  static Future<bool> deleteLifeEvent(int id) async {
+    try {
+      debugPrint('Deleting life event ID: $id');
+      
+      final response = await DioClient.dio.delete(
+        '/api/life-events/$id',
+        options: Options(validateStatus: (status) => true),
+      );
+
+      debugPrint('Delete life event response status: ${response.statusCode}');
+      
+      if (response.statusCode != 204 && response.statusCode != 200) {
+        debugPrint('Failed to delete life event: ${response.statusMessage}');
+        debugPrint('Response data: ${response.data}');
+        return false; // Return false instead of throwing
+      }
+      
+      debugPrint('Life event deleted successfully');
+      return true;
+    } catch (e, stackTrace) {
+      debugPrint('Exception deleting life event: $e');
+      debugPrint('Stack trace: $stackTrace');
+      return false; // Return false instead of throwing
+    }
+  }
 }
 
 
