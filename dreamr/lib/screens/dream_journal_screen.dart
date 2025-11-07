@@ -13,7 +13,7 @@ class DreamJournalScreen extends StatefulWidget {
 }
 
 class _DreamJournalScreenState extends State<DreamJournalScreen> {
-  bool _statsExpanded = true;
+  bool _statsExpanded = false;
   Map<String, int> _toneCounts = {};
 
   //For Calendar
@@ -265,6 +265,7 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                                 text: TextSpan(
                                   children: [
                                     const TextSpan(
+                                      // text: "✨ Dream Stats",
                                       text: "✨ Dreams Logged: ",
                                       style: TextStyle(
                                         color: Colors.white,
