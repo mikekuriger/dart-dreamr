@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:dreamr/widgets/life_event_widget.dart';
 import 'package:dreamr/repository/life_event_repository.dart';
 import 'package:dreamr/theme/colors.dart';
-import 'package:dreamr/models/life_event.dart';
 
 class LifeEventsScreen extends StatefulWidget {
   final VoidCallback? onDone;
