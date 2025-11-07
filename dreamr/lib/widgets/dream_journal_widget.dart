@@ -4,12 +4,10 @@ import 'package:dreamr/models/dream.dart';
 import 'package:dreamr/services/api_service.dart';
 import 'package:dreamr/services/dio_client.dart';
 import 'package:dreamr/services/image_store.dart';
-import 'package:dreamr/theme/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import 'package:mime/mime.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 
 

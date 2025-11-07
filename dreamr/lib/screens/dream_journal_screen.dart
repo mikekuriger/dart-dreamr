@@ -1,11 +1,8 @@
 // screens/dream_journal_screen.dart
-import 'package:dreamr/theme/colors.dart' show AppColors;
 import 'package:dreamr/widgets/main_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:dreamr/widgets/dream_journal_widget.dart';
 import 'package:dreamr/constants.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'dart:math' as math;
 
 class DreamJournalScreen extends StatefulWidget {
   final ValueNotifier<int> refreshTrigger;
@@ -194,7 +191,7 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: percentage,
-                  backgroundColor: Colors.white.withOpacity(0.2),
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
                   valueColor: AlwaysStoppedAnimation<Color>(color),
                   minHeight: 6,
                 ),
@@ -249,7 +246,7 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 0, 0, 0).withOpacity(.4),  
+                    color: const Color.fromARGB(255, 0, 0, 0).withValues(alpha: 0.45),
                     // color: AppColors.purple850,
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -261,9 +258,9 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
-                            "Dream ✨ Stats",
+                            "✨ Stats",
                             style: TextStyle(
-                              fontSize: 15,
+                              fontSize: 16,
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                             ),
@@ -313,7 +310,7 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                                 text: TextSpan(
                                   children: [
                                     const TextSpan(
-                                      text: "Most Common Mood: ",
+                                      text: "Most Common Dream: ",
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.normal,
@@ -334,14 +331,28 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                               
                               if (_toneCounts.isNotEmpty) ...[
                                 const SizedBox(height: 8),
-                                const Text(
-                                  "All Moods:",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                // const Text(
+                                //   "All Moods:",
+                                //   style: TextStyle(
+                                //     color: Colors.white,
+                                //     fontWeight: FontWeight.bold,
+                                //   ),
+                                // ),
+                                Row(
+                                  children: [
+                                    const Expanded(child: Divider(thickness: 1, color: Colors.white24)),
+                                    const SizedBox(width: 8),
+                                    const Text('✨', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                    const SizedBox(width: 8),
+                                    const Expanded(child: Divider(thickness: 1, color: Colors.white24)),
+                                  ],
                                 ),
-                                const SizedBox(height: 8),
+                                // const Divider(
+                                //   height: 24,                  // vertical space
+                                //   thickness: 1,
+                                //   color: Colors.white24,       // subtle on dark bg
+                                // ),
+                                // const SizedBox(height: 8),
                                 
                                 // Progress bars for each mood - more compact layout and sorted by count
                                 ..._buildSortedMoodBars(),
