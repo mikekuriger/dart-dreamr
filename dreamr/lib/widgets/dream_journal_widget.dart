@@ -255,7 +255,7 @@ class DreamJournalWidgetState extends State<DreamJournalWidget> {
         return ToneStyle(Colors.purple.shade100, Colors.black87);
       case 'nightmarish / dark':
         // return ToneStyle(Colors.black, Colors.red.shade500);  // 👈 spooky red
-        return ToneStyle(Colors.grey.shade900, Colors.orange.shade200);  // 👈 spooky red
+        return ToneStyle(Colors.grey.shade900, Colors.orange.shade200);  // 👈 spooky orange
       case 'romantic / nostalgic':
         return ToneStyle(Colors.pink.shade100, Colors.black87);
       case 'ancient / mythic':
@@ -521,6 +521,7 @@ Rect _originFromKey(GlobalKey key) {
               decoration: BoxDecoration(
                 color: toneStyle.background,
                 borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: toneStyle.text.withValues(alpha: 0.5), width: 1),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
