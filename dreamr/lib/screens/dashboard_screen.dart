@@ -1,4 +1,6 @@
 // screens/dashboard_screen.dart
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';  // Added for rootBundle
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -8,16 +10,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dreamr/services/api_service.dart';
 import 'package:dreamr/constants.dart';
 import 'package:dreamr/theme/colors.dart';
-import 'package:dreamr/models/dream.dart';
 import 'package:dreamr/services/image_store.dart';
 import 'package:dreamr/services/dio_client.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:mime/mime.dart';
 import 'dart:io';
 import 'dart:async';
-import 'dart:convert';
+import 'dart:math' as math;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:google_speech/google_speech.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 
@@ -36,20 +36,115 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final AudioPlayer _player = AudioPlayer();
-  
+
+  late final AnimationController _micAnim;
+  late final Animation<double> _micScale;
+  late final Animation<double> _micOpacity;
+
+  // Compute RMS of 16-bit little-endian PCM audio data
+  double _rmsInt16Le(Uint8List bytes) {
+    if (bytes.length < 2) return 0.0;
+    final bd = ByteData.sublistView(bytes);
+    double acc = 0.0;
+    int n = 0;
+    for (int i = 0; i + 1 < bytes.length; i += 2) {
+      final s = bd.getInt16(i, Endian.little); // -32768..32767
+      acc += (s * s).toDouble();
+      n++;
+    }
+    if (n == 0) return 0.0;
+    return math.sqrt(acc / n);
+  }
+
   // Speech recognition variables
-  bool _isRecording = false;
-  String _recognizedSpeech = '';
-  SpeechToText? _speechClient;
-  
+  late SpeechToText _speech;
+
+  // Auto-stop on silence
+  Timer? _silenceTimer;
+  DateTime _lastHeard = DateTime.now();
+  final Duration _silenceTimeout = const Duration(seconds: 3);
+
+  // Simple VAD (noise calibration)
+  bool _vadCalibrating = false;
+  int _vadCalibFrames = 0;
+  double _noiseFloor = 0.0;
+
   // Audio recording variables
   FlutterSoundRecorder? _audioRecorder;
-  StreamController<Uint8List>? _audioStreamController;
-  StreamSubscription? _recognitionStream;
+  StreamController<List<int>>? _googleAudioCtl; 
+  StreamController<Uint8List>? _micCtl;
   
+  StreamSubscription? _recognitionSub;
+
+  bool _isRecording = false;
+  String _committedText = '';
+  String _interimText = '';
+  DateTime _lastInterimAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  String _applySpokenPunctuation(String input) {
+    var s = ' $input ';
+
+    final rules = <RegExp, String>{
+      RegExp(r'\b(ellipsis|dot dot dot)\b', caseSensitive: false): ' … ',
+      RegExp(r'\b(question mark)\b',        caseSensitive: false): ' ? ',
+      RegExp(r'\b(exclamation (?:point|mark))\b', caseSensitive: false): ' ! ',
+      RegExp(r'\b(semicolon)\b',            caseSensitive: false): ' ; ',
+      RegExp(r'\b(colon)\b',                caseSensitive: false): ' : ',
+      RegExp(r'\b(dash|hyphen)\b',          caseSensitive: false): ' - ',
+      RegExp(r'\b(comma)\b',                caseSensitive: false): ' , ',
+      RegExp(r'\b(period|full stop)\b',     caseSensitive: false): ' . ',
+      RegExp(r'\b(new line)\b',             caseSensitive: false): '\n',
+      RegExp(r'\b(new paragraph)\b',        caseSensitive: false): '\n\n',
+      RegExp(r'\b(open quote)\b',           caseSensitive: false): ' “',
+      RegExp(r'\b(close quote)\b',          caseSensitive: false): '” ',
+    };
+    rules.forEach((re, sym) => s = s.replaceAll(re, sym));
+
+    // Use replaceAllMapped for “$1”-style fixes
+    s = s.replaceAllMapped(RegExp(r'\s+([,.;:!?…])'), (m) => '${m[1]} ');
+    s = s.replaceAllMapped(RegExp(r'\s+([”“])'),      (m) => '${m[1]}');
+    s = s.replaceAllMapped(RegExp(r'([\(])\s+'),       (m) => '${m[1]}');
+    s = s.replaceAllMapped(RegExp(r'\s+([\)])'),       (m) => '${m[1]}');
+
+    s = s.replaceAll(RegExp(r'\s+\n'), '\n');
+    s = s.replaceAll(RegExp(r'\n\s+'), '\n');
+    s = s.replaceAll(RegExp(r' {2,}'), ' ');
+    s = s.trim();
+
+    // Optional capitalization
+    s = s.replaceAllMapped(RegExp(r'(^|[.!?\n]\s+)([a-z])'), (m) => '${m[1]}${m[2]!.toUpperCase()}');
+
+    return s;
+  }
+
+  void _renderTextField() {
+    final committed = _committedText.trimRight();
+    final interim   = _interimText.trimLeft();
+    final shown     = (interim.isEmpty ? committed : '$committed $interim'.trim());
+
+    // Mark only the interim as "composing" so platforms visually hint it's provisional.
+    final start = committed.length + (committed.isEmpty || interim.isEmpty ? 0 : 1);
+    final end   = shown.length;
+
+    final value = TextEditingValue(
+      text: shown,
+      selection: TextSelection.collapsed(offset: shown.length),
+      composing: (interim.isEmpty || end <= start)
+          ? TextRange.empty
+          : TextRange(start: start, end: end),
+    );
+
+    if (_controller.value.text != value.text ||
+        _controller.value.selection.baseOffset != value.selection.baseOffset) {
+      _controller.value = value;
+    }
+  }
+
+
   String? _userName;
   bool _enableAudio = false;
   bool _hasPlayedIntroAudio = false;
@@ -68,6 +163,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadDraftText();
     _initSpeechApi();
 
+    _micAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _micScale = Tween<double>(begin: 1.0, end: 1.25)
+        .chain(CurveTween(curve: Curves.easeInOutCubic))
+        .animate(_micAnim);
+    _micOpacity = Tween<double>(begin: 0.5, end: 1.0)
+        .chain(CurveTween(curve: Curves.easeInOut))
+        .animate(_micAnim);
+
     _controller.addListener(() {
       if (_controller.text.trim().isNotEmpty) {
         _saveDraft(_controller.text);
@@ -80,72 +183,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void dispose() {
     _player.dispose();
+    _audioRecorder?.closeRecorder();
+    _googleAudioCtl?.close();
+    _micCtl?.close();
     widget.refreshTrigger.removeListener(_refreshFromTrigger);
     _stopRecording();
+    _micAnim.dispose();
     super.dispose();
   }
   
   // Initialize speech recognition with Google Cloud Speech API
   Future<void> _initSpeechApi() async {
     try {
-      // Initialize audio recorder
       _audioRecorder = FlutterSoundRecorder();
       await _audioRecorder!.openRecorder();
-      
-      // Load the service account credentials from assets file
-      final String rawCredentials = await rootBundle.loadString('assets/gcloud-key.json');
-      
-      // Create ServiceAccount object directly from the credentials string
-      final serviceAccount = ServiceAccount.fromString(rawCredentials);
-      
-      // Initialize Google Cloud Speech client
-      _speechClient = SpeechToText.viaServiceAccount(serviceAccount);
-      
-      debugPrint('Google Speech API initialized successfully');
+      // iOS stability tweaks
+      try {
+        await _audioRecorder!.setSubscriptionDuration(const Duration(milliseconds: 50));
+      } catch (_) {}
+
+      final raw = await rootBundle.loadString('assets/gcloud-key.json');
+      final sa  = ServiceAccount.fromString(raw);
+      _speech   = SpeechToText.viaServiceAccount(sa);
+
+      debugPrint('STT init ok');
     } catch (e) {
-      debugPrint('Failed to initialize Google Speech API: $e');
-      _showErrorSnackBar('Failed to initialize speech recognition: ${e.toString()}');
+      debugPrint('STT init failed: $e');
+      _showErrorSnackBar('Failed to initialize speech recognition');
     }
   }
+
   
   // Stop recording and clean up
   Future<void> _stopRecording() async {
     if (!_isRecording) return;
-    
     try {
-      // Stop audio recording
-      if (_audioRecorder != null && _audioRecorder!.isRecording) {
+      debugPrint('stopping recorder…');
+      if (_audioRecorder?.isRecording == true) {
         await _audioRecorder!.stopRecorder();
       }
-      
-      // Cancel any ongoing recognition stream
-      await _recognitionStream?.cancel();
-      _recognitionStream = null;
-      
-      // Close audio stream if open
-      if (_audioStreamController != null) {
-        if (!_audioStreamController!.isClosed) {
-          await _audioStreamController!.close();
-        }
-        _audioStreamController = null;
+      debugPrint('recorder stopped');
+
+      await _recognitionSub?.cancel();
+      _recognitionSub = null;
+
+      if (_googleAudioCtl != null && !_googleAudioCtl!.isClosed) {
+        await _googleAudioCtl!.close();
       }
-      
-      setState(() {
-        _isRecording = false;
-      });
-      
-      debugPrint('Stopped recording and streaming');
-    } catch (e) {
-      debugPrint('Error stopping recording: $e');
-      setState(() {
-        _isRecording = false;
-      });
+      if (_micCtl != null && !_micCtl!.isClosed) {
+        await _micCtl!.close();
+      }
+      _googleAudioCtl = null;
+      _micCtl = null;
+    } catch (e, st) {
+      debugPrint('stop error: $e\n$st');
+    } finally {
+      if (mounted) setState(() => _isRecording = false);
+      _silenceTimer?.cancel();
+      _silenceTimer = null;
+      _micAnim.stop();
+      _micAnim.value = 0.0;
     }
   }
   
-  // Removed _showInfoSnackBar method to prevent unwanted popups
-
-
   // Request microphone permission
   Future<bool> _requestMicPermission() async {
     var status = await Permission.microphone.status;
@@ -320,155 +420,157 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Start voice recording and transcription
   Future<void> _startVoiceRecording() async {
-    // If already recording, stop recording
+    // toggle
     if (_isRecording) {
       await _stopRecording();
       return;
     }
-    
-    // Request microphone permission
-    final hasMicPermission = await _requestMicPermission();
-    if (!hasMicPermission) {
-      return;
-    }
-    
-    try {
-      // Initialize if needed
-      if (_speechClient == null) {
-        await _initSpeechApi();
-        if (_speechClient == null) {
-          _showErrorSnackBar('Could not initialize speech recognition');
-          return;
+
+    // mic permission once
+    final granted = await _requestMicPermission();
+    if (!granted) return;
+
+    // client ready
+    if (_audioRecorder == null) await _initSpeechApi();
+
+    // stop any audio that may hold session
+    try { await _player.stop(); } catch (_) {}
+
+    // state
+    _committedText = _controller.text;
+    _interimText = '';
+    _micAnim.repeat(reverse: true);
+    setState(() => _isRecording = true);
+
+    // controllers
+    _googleAudioCtl?.close();
+    _micCtl?.close();
+    _googleAudioCtl = StreamController<List<int>>();
+    _micCtl = StreamController<Uint8List>.broadcast();
+
+    // bridge mic → chunk → Google
+    _micCtl!.stream.listen((Uint8List data) {
+      if (data.isEmpty) return;
+
+      // --- VAD: compute RMS on 16-bit little-endian PCM
+      final rms = _rmsInt16Le(data);
+      if (_vadCalibrating) {
+        // ≈ first 1s: learn noise floor using your 50ms subscription duration
+        _vadCalibFrames++;
+        _noiseFloor += rms;
+        if (_vadCalibFrames >= 20) {
+          _noiseFloor /= _vadCalibFrames;
+          _vadCalibrating = false;
+          debugPrint('VAD noiseFloor=${_noiseFloor.toStringAsFixed(1)}');
+        }
+      } else {
+        // Dynamic threshold a bit above ambient
+        final threshold = (_noiseFloor * 2.5).clamp(150.0, 800.0);
+        if (rms > threshold) _lastHeard = DateTime.now();
+      }
+
+      // --- Forward to Google in ≤24 KB chunks
+      const max = 24 * 1024;
+      for (var i = 0; i < data.length; i += max) {
+        final end = (i + max > data.length) ? data.length : i + max;
+        _googleAudioCtl?.add(data.sublist(i, end));
+      }
+    }, onError: (e) {
+      debugPrint('mic stream error: $e');
+    });
+
+
+    // recognition config
+    final cfg = RecognitionConfig(
+      encoding: AudioEncoding.LINEAR16,
+      sampleRateHertz: 16000,
+      audioChannelCount: 1,
+      languageCode: 'en-US',
+      // enableAutomaticPunctuation: true,
+      enableAutomaticPunctuation: false,
+      maxAlternatives: 1,
+      model: RecognitionModel.basic,
+      speechContexts: [
+        SpeechContext([
+          'period', 'full stop', 'comma', 'question mark',
+          'exclamation point', 'exclamation mark',
+          'semicolon', 'colon',
+          'dash', 'hyphen', 'ellipsis', 'dot dot dot',
+          'quote', 'open quote', 'close quote',
+          'new line', 'new paragraph',
+        ]),
+      ],
+    );
+
+    // streaming config
+    final scfg = StreamingRecognitionConfig(
+      config: cfg,
+      interimResults: true,
+      singleUtterance: false,
+    );
+
+    // start Google stream
+    debugPrint('creating google stream…');
+    final responses = _speech.streamingRecognize(scfg, _googleAudioCtl!.stream);
+    _recognitionSub = responses.listen((resp) {
+      for (final r in resp.results) {
+        if (r.alternatives.isEmpty) continue;
+        var t = r.alternatives.first.transcript;
+        if (t.isEmpty) continue;
+
+        if (r.isFinal) {
+          // Map punctuation ONLY on finals
+          t = _applySpokenPunctuation(t);
+
+          _committedText = _committedText.isEmpty ? t : '$_committedText $t';
+          _interimText = '';
+          _renderTextField();
+        } else {
+          // Interim: debounce + optional stability filter to reduce churn
+          final now = DateTime.now();
+          final debounceOk = now.difference(_lastInterimAt).inMilliseconds >= 120;
+          final stabilityOk = (r.stability >= 0.7); // if field present; otherwise ignore
+          if (debounceOk && stabilityOk) {
+            _interimText = t;
+            _lastInterimAt = now;
+            _renderTextField();
+          }
         }
       }
-      
-      // Turn button red to show recording state (visual feedback only)
-      setState(() {
-        _isRecording = true;
-        _recognizedSpeech = 'Listening...';
-      });
-      
-      // Create a stream for the audio data with correct Uint8List type
-      _audioStreamController = StreamController<Uint8List>();
-      
-      // Set up recognition config for real-time streaming
-      final config = RecognitionConfig(
-        encoding: AudioEncoding.LINEAR16,
-        sampleRateHertz: 16000, 
-        audioChannelCount: 1,  // Mono
-        languageCode: 'en-US',
-        // enableAutomaticPunctuation: false,
-        enableAutomaticPunctuation: true,
-        model: RecognitionModel.basic,
-        // model: RecognitionModel.enhanced,
-      );
-      
-      // Create streaming config with interim results for real-time feedback
-      final streamingConfig = StreamingRecognitionConfig(
-        config: config,
-        interimResults: true,  // Important for real-time transcription
-      );
-      
-      debugPrint('Starting real-time speech recognition stream');
-      
-      // Start the streaming recognition
-      final responseStream = _speechClient!.streamingRecognize(
-        streamingConfig,
-        _audioStreamController!.stream,
-      );
-      
-      // Start recording with streaming directly to memory
-      await _audioRecorder!.startRecorder(
-        toStream: _audioStreamController!.sink,  // Stream directly to recognition
-        codec: Codec.pcm16,
-        sampleRate: 16000,
-        numChannels: 1,  // Mono
-      );
-      
-      // Track the last final transcript to prevent duplication
-      String lastFinalTranscript = '';
-      
-      // Listen for recognition results
-      _recognitionStream = responseStream.listen(
-        (response) {
-          if (response.results.isEmpty) return;
-          
-          // Process results
-          for (final result in response.results) {
-            if (result.alternatives.isEmpty) continue;
-            
-            // Get transcript
-            final transcript = result.alternatives.first.transcript;
-            if (transcript.isEmpty) continue;
-            
-            debugPrint('Received transcript: "$transcript", isFinal: ${result.isFinal}');
-            
-            // Update recognized speech state for visual feedback
-            setState(() => _recognizedSpeech = transcript);
-            
-            // Only update the text field with final results to prevent duplication
-            if (result.isFinal) {
-              // Check if this transcript is a duplicate
-              if (lastFinalTranscript == transcript) {
-                debugPrint('Ignoring duplicate transcript: "$transcript"');
-                continue;
-              }
-              
-              lastFinalTranscript = transcript;
-              
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  try {
-                    final currentText = _controller.text;
-                    String newText;
-                    
-                    // Proper text concatenation
-                    if (currentText.isEmpty) {
-                      newText = transcript;
-                    } else if (currentText.endsWith(' ')) {
-                      newText = currentText + transcript;
-                    } else {
-                      newText = '$currentText $transcript';
-                    }
-                    
-                    // Update text field and cursor position
-                    _controller.value = TextEditingValue(
-                      text: newText,
-                      selection: TextSelection.fromPosition(
-                        TextPosition(offset: newText.length),
-                      ),
-                    );
-                  } catch (e) {
-                    debugPrint('Error updating text field: $e');
-                  }
-                }
-              });
-            } else {
-              // For interim results, just update the display state
-              // This shows the user what's being recognized without adding to input
-              debugPrint('Interim result: "$transcript"');
-            }
-          }
-        },
-        onError: (e) {
-          debugPrint('Speech recognition error: $e');
-          if (mounted) {
-            _showErrorSnackBar('Speech recognition error: ${e.toString()}');
-          }
-          _stopRecording();
-        },
-        onDone: () {
-          debugPrint('Speech recognition stream done');
-        },
-      );
-      
-      // Removed auto-stop timer to prevent unexpected recording shutdowns
-    } catch (e) {
-      debugPrint('Error starting speech recognition: $e');
-      _showErrorSnackBar('Failed to start speech recognition: ${e.toString()}');
+    }, onError: (e, st) {
+      _interimText = '';
+      _renderTextField();
+      _showErrorSnackBar('Speech recognition error');
       _stopRecording();
-    }
+    });
+
+    // start mic AFTER stream exists
+    await _audioRecorder!.startRecorder(
+      codec: Codec.pcm16,
+      sampleRate: 16000,
+      numChannels: 1,
+      toStream: _micCtl!.sink, // required StreamSink<Uint8List>
+    );
+    debugPrint('recorder started: ${_audioRecorder!.isRecording}');
+
+    // --- Reset silence/VAD state
+    _lastHeard = DateTime.now();
+    _vadCalibrating = true;
+    _vadCalibFrames = 0;
+    _noiseFloor = 0.0;
+
+    // --- Kick off periodic silence check
+    _silenceTimer?.cancel();
+    _silenceTimer = Timer.periodic(const Duration(milliseconds: 500), (_) async {
+      if (!_isRecording) return;
+      final idle = DateTime.now().difference(_lastHeard) > _silenceTimeout;
+      if (idle) {
+        debugPrint('auto-stop: silence > ${_silenceTimeout.inSeconds}s');
+        await _stopRecording();
+      }
+    });
   }
+
 
 // sharing
 // Anchor key for share button
@@ -595,6 +697,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     border: OutlineInputBorder(),
                   ),
                 ),
+
                 const SizedBox(height: 16),
 
                 // Button row with mic and analyze
@@ -602,29 +705,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     // Voice recording button
                     SizedBox(
-                      width: 56, // Square button
-                      height: 56, // Match height of analyze button
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _isRecording ? Colors.redAccent : AppColors.purple600,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: AppColors.purple600.withValues(alpha: 0.5),
-                          disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
-                          padding: const EdgeInsets.all(0),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      // height: 56,         // match Analyze button height
+                      // width: 56,          // square mic button
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // glow while recording
+                          if (_isRecording)
+                            FadeTransition(
+                              opacity: _micOpacity,
+                              child: Container(
+                                // width: 56, height: 56,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      blurRadius: 18,
+                                      spreadRadius: 2,
+                                      color: Colors.redAccent.withValues(alpha: 0.45),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              fixedSize: const Size(55, 54),  // enforce size
+                              backgroundColor: _isRecording ? Colors.redAccent : AppColors.purple600,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: (_loading || _imageGenerating) ? null : _startVoiceRecording,
+                            child: ScaleTransition(
+                              scale: _isRecording ? _micScale : AlwaysStoppedAnimation(1.0),
+                              child: Icon(_isRecording ? Icons.stop : Icons.mic, size: 24, color: Colors.white),
+                            ),
                           ),
-                          overlayColor: Colors.white.withValues(alpha: 0.1),
-                        ),
-                        onPressed: (_loading || _imageGenerating) ? null : _startVoiceRecording,
-                        child: Icon(
-                          _isRecording ? Icons.stop : Icons.mic,
-                          size: 24,
-                          color: Colors.white,
-                        ),
+                        ],
                       ),
                     ),
-                    
+
+
                     const SizedBox(width: 12), // Spacing between buttons
                     
                     // Analyze button
