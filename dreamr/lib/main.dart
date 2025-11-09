@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:dreamr/models/subscription.dart';
 import 'package:dreamr/screens/splash_screen.dart';
 import 'package:dreamr/screens/login_screen.dart';
 import 'package:dreamr/screens/register_screen.dart';

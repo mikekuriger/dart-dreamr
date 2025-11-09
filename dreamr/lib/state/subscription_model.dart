@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:dreamr/models/subscription.dart';
 import 'package:dreamr/services/api_service.dart';
 import 'package:dreamr/services/purchase_service.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
+// import 'package:in_app_purchase/in_app_purchase.dart';
 
 /// ChangeNotifier for managing subscription state throughout the app
 class SubscriptionModel extends ChangeNotifier {
@@ -16,6 +16,17 @@ class SubscriptionModel extends ChangeNotifier {
 
   /// Current subscription status
   SubscriptionStatus get status => _status ?? SubscriptionStatus.free();
+  SubscriptionStatus? get statusOrNull => _status;
+  bool get loaded => _status != null;
+
+  /// Reset the subscription model state
+  void reset() {
+    _status = null;
+    _plans = null;
+    _error = null;
+    _loading = false;
+    notifyListeners();
+  }
   
   /// Available subscription plans
   List<SubscriptionPlan> get plans => _plans ?? [];
@@ -48,6 +59,8 @@ class SubscriptionModel extends ChangeNotifier {
       ]);
       
       _status = results[0] as SubscriptionStatus;
+      debugPrint('SUB: isActive=${_status?.isActive} tier=${_status?.tier} textWeek=${_status?.textRemainingWeek}');
+
       _plans = results[1] as List<SubscriptionPlan>;
       
       // Also refresh store products
@@ -173,5 +186,12 @@ class SubscriptionModel extends ChangeNotifier {
   }
 
   /// Check if user has an active premium subscription
-  bool get isPremium => status.tier != 'free' && status.isActive;
+  // bool get isPremium => status.tier != 'free' && status.isActive;
+  bool get isPremium => _status?.isActive ?? false;
+
+  // bool get isPremium {
+  //   final s = _status;
+  //   if (s == null) return false;              // not loaded yet
+  //   return s.isActive && s.tier != 'free';
+  // }
 }

@@ -155,6 +155,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   String? _dreamImagePath;
   String? _lastDreamText;
   int? _lastDreamId;
+
+  int? _textRemainingWeek; // track # of free dreams left
+  bool? _isPro;
   
   @override
   void initState() {
@@ -162,6 +165,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     _loadUserName();
     _loadDraftText();
     _initSpeechApi();
+    _loadQuota();
+
 
     _micAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
     _micScale = Tween<double>(begin: 1.0, end: 1.25)
@@ -179,6 +184,14 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     widget.refreshTrigger.addListener(_refreshFromTrigger);
   }
+  
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh quota data when screen becomes visible again
+    _loadQuota();
+    debugPrint('DashboardScreen: refreshing subscription data in didChangeDependencies');
+  }
 
   @override
   void dispose() {
@@ -191,6 +204,20 @@ class _DashboardScreenState extends State<DashboardScreen>
     _micAnim.dispose();
     super.dispose();
   }
+
+  // Load user's subscription quota
+  Future<void> _loadQuota() async {
+  try {
+    final status = await ApiService.getSubscriptionStatus();
+    if (!mounted) return;
+    setState(() {
+      _isPro = status.isActive;
+      _textRemainingWeek = status.textRemainingWeek;
+    });
+  } catch (_) {
+    // optional: ignore or snackbar
+  }
+}
   
   // Initialize speech recognition with Google Cloud Speech API
   Future<void> _initSpeechApi() async {
@@ -362,6 +389,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('draft_text');
       dreamDataChanged.value = true;
+      _loadQuota(); // refresh quota after submission
       _controller.clear();
 
       if (shouldGen) {
@@ -643,9 +671,18 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
 
-
+  
   @override
   Widget build(BuildContext context) {
+    // final bool canAnalyze = !(_loading || _imageGenerating) &&
+    //     (
+    //       _isPro == null
+    //         ? true                                  // while unknown, don't block the user
+    //         : (_isPro! || ((_textRemainingWeek ?? 0) > 0))
+    //     );
+    final bool isOutOfCredits = (_isPro == false) && ((_textRemainingWeek ?? 0) <= 0);
+    final bool canAnalyze = !(_loading || _imageGenerating) && !isOutOfCredits;
+
     return SafeArea(
       child: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
@@ -667,13 +704,19 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 const SizedBox(height: 8),
 
-                // 📜 Intro
-                const Text(
-                  "Tell me about your dream in as much detail as you remember — characters, settings, emotions, anything that stood out. "
-                  "After submitting, I will analyze your dream and generate a personalized interpretation. "
-                  "Your dream interpretation takes a few moments, but your dream image will take me a minute or so to create.\n"
-                  "So sit tight while the magic happens ✨",
-                  style: TextStyle(fontSize: 13, color: Colors.white),
+                // 📜 Intro - Show different text for users out of credits
+                Text(
+                  isOutOfCredits
+                    ? "You've reached your free dream credits for this week. 🌙 "
+                      "New credits arrive every Sunday, but why wait? "
+                      "Upgrade to Dreamr Pro for unlimited dream analysis, high-resolution dream images, "
+                      "and the ability to share your dreams and images with others. "
+                      "Unlock the full dream experience ✨"
+                    : "Tell me about your dream in as much detail as you remember — characters, settings, emotions, anything that stood out. "
+                      "After submitting, I will analyze your dream and generate a personalized interpretation. "
+                      "Your dream interpretation takes a few moments, but your dream image will take me a minute or so to create.\n"
+                      "So sit tight while the magic happens ✨",
+                  style: const TextStyle(fontSize: 13, color: Colors.white),
                 ),
                 const SizedBox(height: 16),
 
@@ -753,7 +796,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.purple600,
+                          // backgroundColor: AppColors.purple600,
+                          backgroundColor: isOutOfCredits ? Colors.orange.shade700 : AppColors.purple600,
                           foregroundColor: Colors.white,
                           disabledBackgroundColor: AppColors.purple600.withValues(alpha: 0.5),
                           disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
@@ -764,7 +808,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                           overlayColor: Colors.white.withValues(alpha: 0.1),
                         ),
-                        onPressed: (_loading || _imageGenerating) ? null : _submitDream,
+                        // onPressed: (_loading || _imageGenerating) ? null : _submitDream,
+                        onPressed: (_loading || _imageGenerating)
+                          ? null
+                          : (canAnalyze
+                              ? _submitDream
+                              : () => Navigator.pushNamed(context, '/subscription')),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -784,7 +833,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   ? "Generating Image"
                                   : _loading
                                       ? "Analyzing..."
-                                      : "Analyze my dream",
+                                      : canAnalyze ? "Analyze my dream" : "Upgrade to Pro",
                             ),
                           ],
                         ),

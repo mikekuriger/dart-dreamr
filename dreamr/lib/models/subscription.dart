@@ -47,50 +47,63 @@ class SubscriptionPlan {
 
 /// Represents the user's subscription status
 class SubscriptionStatus {
-  final String tier; // 'free', 'pro', etc.
+  final String tier; // e.g. "free", "pro_yearly"
   final DateTime? expiryDate;
   final bool isActive;
   final bool autoRenew;
-  final String? paymentMethod;
+  // final String? paymentMethod;
 
-  const SubscriptionStatus({
+  // Free-only fields. Null for paid.
+  final int? textRemainingWeek;
+  final int? imageRemainingLifetime;
+  final DateTime? nextReset;
+
+
+  // const SubscriptionStatus({
+  SubscriptionStatus({
     required this.tier,
-    this.expiryDate,
     required this.isActive,
     required this.autoRenew,
-    this.paymentMethod,
+    required this.expiryDate,
+    required this.textRemainingWeek,
+    required this.imageRemainingLifetime,
+    required this.nextReset,
+    // this.paymentMethod,
   });
+
+  factory SubscriptionStatus.free() => SubscriptionStatus(
+    tier: 'free',
+    isActive: false,
+    autoRenew: false,
+    expiryDate: null,
+    textRemainingWeek: null,
+    imageRemainingLifetime: null,
+    nextReset: null,
+  );
+
+  static int? _toInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is String) return int.tryParse(v);
+    return null;
+    }
+
+  static DateTime? _toDateTime(dynamic v) {
+    if (v is String && v.isNotEmpty) {
+      return DateTime.tryParse(v.replaceFirst('Z', '+00:00'));
+    }
+    return null;
+  }
 
   factory SubscriptionStatus.fromJson(Map<String, dynamic> json) {
     return SubscriptionStatus(
-      tier: json['tier'] as String,
-      expiryDate: json['expiry_date'] != null 
-          ? DateTime.parse(json['expiry_date'] as String) 
-          : null,
-      isActive: json['is_active'] as bool,
-      autoRenew: json['auto_renew'] as bool,
-      paymentMethod: json['payment_method'] as String?,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'tier': tier,
-      'expiry_date': expiryDate?.toIso8601String(),
-      'is_active': isActive,
-      'auto_renew': autoRenew,
-      'payment_method': paymentMethod,
-    };
-  }
-
-  /// Default free tier status
-  factory SubscriptionStatus.free() {
-    return const SubscriptionStatus(
-      tier: 'free',
-      expiryDate: null,
-      isActive: true,
-      autoRenew: false,
-      paymentMethod: null,
+      tier: (json['tier'] ?? 'free').toString(),
+      isActive: json['is_active'] == true,
+      autoRenew: json['auto_renew'] == true,
+      expiryDate: _toDateTime(json['expiry_date']),
+      textRemainingWeek: _toInt(json['text_remaining_week']),
+      imageRemainingLifetime: _toInt(json['image_remaining_lifetime']),
+      nextReset: _toDateTime(json['next_reset_iso']),
     );
   }
 }

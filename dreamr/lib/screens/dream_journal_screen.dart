@@ -3,6 +3,8 @@ import 'package:dreamr/widgets/main_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:dreamr/widgets/dream_journal_widget.dart';
 import 'package:dreamr/constants.dart';
+import 'package:dreamr/services/api_service.dart';
+
 
 class DreamJournalScreen extends StatefulWidget {
   final ValueNotifier<int> refreshTrigger;
@@ -31,13 +33,29 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
   //   );
   // }
 
+
+  // state fields
+  int _dreamCount = 0;
+  String _mostCommonTone = '';
+  // int _longestWordCount = 0;
+
+  int? _textRemainingWeek;
+  int? _imageRemainingLifetime;
+  DateTime? _nextReset;
+  bool _quotaLoading = false;
+  String? _quotaError;
+  bool? _isPro; // null = loading
+
+
   @override
   void initState() {
     super.initState();
 
     // Initial load after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadStats();
+      // _loadStats();
+      // await _loadQuota();
+      _refreshStats();
     });
 
     // ✅ Listen for bottom nav tab refresh
@@ -47,15 +65,13 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
     dreamDataChanged.addListener(() {
       if (dreamDataChanged.value == true) {
         _refreshJournal();
-        _loadStats();
+        _refreshStats();
+        // _loadStats();
+        // await _loadQuota();
         dreamDataChanged.value = false;
       }
     });
   }
-
-  int _dreamCount = 0;
-  String _mostCommonTone = '';
-  // int _longestWordCount = 0;
 
   final GlobalKey<DreamJournalWidgetState> _journalKey = GlobalKey();
 
@@ -63,9 +79,9 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
     _journalKey.currentState?.refresh();
 
     // 👇 collapse stats box whenever this screen is triggered to refresh
-    // setState(() {
-    //   _statsExpanded = true;
-    // });
+    setState(() {
+      _statsExpanded = false;
+    });
   }
 
   void _loadStats() {
@@ -93,6 +109,36 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
       _mostCommonTone = mostCommon?.key ?? 'N/A';
     });
   }
+
+  Future<void> _loadQuota() async {
+    setState(() {
+      _quotaLoading = true;
+      _quotaError = null;
+    });
+
+    try {
+      final status = await ApiService.getSubscriptionStatus();
+
+      setState(() {
+        _isPro = status.isActive;
+        _textRemainingWeek = status.textRemainingWeek;            // null for paid
+        _imageRemainingLifetime = status.imageRemainingLifetime;  // null for paid
+        _nextReset = status.nextReset;                            // null for paid
+        _quotaLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _quotaLoading = false;
+        _quotaError = 'Failed to load quota';
+      });
+    }
+  }
+
+  Future<void> _refreshStats() async {
+    _loadStats();          // local aggregates
+    await _loadQuota();    // network
+  }
+
   
   // Generate a consistent color for each mood
   Color _getMoodColor(String mood) {
@@ -225,7 +271,9 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
     return RefreshIndicator(
       onRefresh: () async {
         _refreshJournal();
-        _loadStats();
+        // _loadStats();
+        // await _loadQuota();
+        _refreshStats();
       },
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(4),
@@ -264,34 +312,38 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                            RichText(
                                 text: TextSpan(
                                   children: [
-                                    const TextSpan(
-                                      // text: "✨ Dream Stats",
-                                      text: "✨ Dreams Logged: ",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.normal,
-                                        // fontStyle: FontStyle.italic,
+                                    if (_isPro == null) ...[
+                                      const TextSpan(text: " ", style: TextStyle(color: Colors.white)),
+                                    ] else if (_isPro!) ...[
+                                      const TextSpan(
+                                        text: "✨ Dreams Logged: ",
+                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.normal),
                                       ),
-                                    ),
-                                    TextSpan(
-                                      text: '$_dreamCount',
-                                      style: const TextStyle(
-                                        color: Colors.yellow,
-                                        fontWeight: FontWeight.bold,
-                                        // fontSize: 16,
+                                      TextSpan(
+                                        text: '$_dreamCount',
+                                        style: const TextStyle(color: Colors.yellow, fontWeight: FontWeight.bold),
                                       ),
-                                    ),
+                                    ] else ...[
+                                      TextSpan(
+                                        text: "✨ Dream Credits: ",
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.normal),
+                                      ),
+                                      TextSpan(
+                                        text: "${_textRemainingWeek ?? 0}",
+                                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                      ),
+                                      TextSpan(
+                                        text: "  🔮 Image Credits: ",
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.normal),
+                                      ),
+                                      TextSpan(
+                                        text: "${_imageRemainingLifetime ?? 0}",
+                                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
-                          // Text(
-                          //   "✨ Dreams Logged: $_dreamCount",
-                          //   style: const TextStyle(
-                          //     fontSize: 16,
-                          //     color: Colors.white,
-                          //     fontWeight: FontWeight.bold,
-                          //   ),
-                          // ),
                           Icon(
                             _statsExpanded ? Icons.expand_less : Icons.expand_more,
                             color: Colors.white, // ✅ white icon
@@ -311,28 +363,31 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // RichText(
-                              //   text: TextSpan(
-                              //     children: [
-                              //       const TextSpan(
-                              //         text: "Dreams Logged: ",
-                              //         style: TextStyle(
-                              //           color: Colors.white,
-                              //           fontWeight: FontWeight.normal,
-                              //           fontStyle: FontStyle.italic,
-                              //         ),
-                              //       ),
-                              //       TextSpan(
-                              //         text: '$_dreamCount',
-                              //         style: const TextStyle(
-                              //           color: Colors.yellow,
-                              //           fontWeight: FontWeight.bold,
-                              //           // fontSize: 16,
-                              //         ),
-                              //       ),
-                              //     ],
-                              //   ),
-                              // ),
+                  // Show this for free accounts only (hide for pro)      
+                              if (_isPro == false) ...[   
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      const TextSpan(
+                                        text: "Dreams Logged: ",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.normal,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: '$_dreamCount',
+                                        style: const TextStyle(
+                                          color: Colors.yellow,
+                                          fontWeight: FontWeight.bold,
+                                          // fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                               RichText(
                                 text: TextSpan(
                                   children: [
@@ -420,7 +475,8 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
             ),
             DreamJournalWidget(
               key: _journalKey,
-              onDreamsLoaded: _loadStats,
+              // onDreamsLoaded: _loadStats,
+              onDreamsLoaded: _refreshStats,
             ),
           ],
         ),

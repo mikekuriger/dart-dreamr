@@ -1,6 +1,7 @@
 // widgets/main_scaffold.dart
 // import 'package:dreamr/services/api_service.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:dreamr/theme/colors.dart';
 import 'package:dreamr/screens/dashboard_screen.dart';
 import 'package:dreamr/screens/dream_journal_screen.dart';
@@ -9,8 +10,10 @@ import 'package:dreamr/screens/dream_gallery_screen.dart';
 import 'package:dreamr/screens/profile_screen.dart';
 import 'package:dreamr/screens/subscription_screen.dart';
 import 'package:dreamr/screens/life_events_screen.dart';
+import 'package:dreamr/screens/help_screen.dart';
 import 'package:dreamr/constants.dart';
 import 'package:dreamr/utils/session_manager.dart';
+import 'package:dreamr/state/subscription_model.dart';
 
 
 class MainScaffold extends StatefulWidget {
@@ -26,6 +29,11 @@ class _MainScaffoldState extends State<MainScaffold> {
   late int _selectedIndex;
   late final List<Widget> _views;
   bool _navEnabled = true;
+  
+  // Subscription state
+  bool _isPro = false;
+  int? _textRemainingWeek;
+  bool _subscriptionLoaded = false;
 
   Widget _getTitleForIndex(int index) {
     String title;
@@ -76,10 +84,43 @@ class _MainScaffoldState extends State<MainScaffold> {
     );
   }
 
+  // Load subscription data from provider
+  void _loadSubscriptionData() {
+    final subscriptionModel = Provider.of<SubscriptionModel>(context, listen: false);
+    if (subscriptionModel.loaded) {
+      setState(() {
+        _isPro = subscriptionModel.status.isActive;
+        _textRemainingWeek = subscriptionModel.status.textRemainingWeek;
+        _subscriptionLoaded = true;
+      });
+      
+      // Debug print to verify data is loading correctly
+      debugPrint('MainScaffold: Loaded subscription data - isPro: $_isPro, textRemainingWeek: $_textRemainingWeek');
+    } else {
+      // If not loaded yet, try again after a delay
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _loadSubscriptionData();
+        }
+      });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Ensure subscription data is loaded and up-to-date
+    _loadSubscriptionData();
+  }
+
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+    
+    // Initial load will be handled by didChangeDependencies
+    // which is called right after initState
+    
     _views = [
       // DashboardScreen(refreshTrigger: dreamEntryRefreshTrigger), // index 0
       DashboardScreen(
@@ -110,6 +151,26 @@ class _MainScaffoldState extends State<MainScaffold> {
     // force close keyboard
     FocusScope.of(context).unfocus();
 
+    // Get latest subscription data directly from the provider
+    final subscriptionModel = Provider.of<SubscriptionModel>(context, listen: false);
+    final bool isPro = subscriptionModel.loaded ? subscriptionModel.status.isActive : _isPro;
+    final int? textRemainingWeek = subscriptionModel.loaded ? subscriptionModel.status.textRemainingWeek : _textRemainingWeek;
+    
+    // Check if user is out of credits and trying to create new dream
+    final bool isOutOfCredits = !isPro && (textRemainingWeek ?? 0) <= 0;
+    
+    // if (index == 0 && isOutOfCredits) {
+    //   // Redirect to subscription screen instead
+    //   Navigator.push(
+    //     context, 
+    //     MaterialPageRoute(
+    //       // builder: (context) => const SubscriptionScreen(),
+    //       builder: (context) => const SubscriptionScreen(),
+    //     ),
+    //   );
+    //   return;
+    // }
+
     // Trigger refresh logic based on index
     switch (index) {
       case 0:
@@ -132,6 +193,9 @@ class _MainScaffoldState extends State<MainScaffold> {
         break;
     }
     
+    // Force a refresh of subscription data to ensure buttons are up-to-date
+    subscriptionModel.refresh();
+    
     setState(() {
       _selectedIndex = index;
     });
@@ -140,6 +204,25 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen for subscription changes
+    final subscriptionModel = Provider.of<SubscriptionModel>(context);
+    if (_subscriptionLoaded && subscriptionModel.loaded) {
+      final newIsPro = subscriptionModel.status.isActive;
+      final newTextRemainingWeek = subscriptionModel.status.textRemainingWeek;
+      
+      if (newIsPro != _isPro || newTextRemainingWeek != _textRemainingWeek) {
+        // Update state if changed
+        Future.microtask(() {
+          if (mounted) {
+            setState(() {
+              _isPro = newIsPro;
+              _textRemainingWeek = newTextRemainingWeek;
+            });
+          }
+        });
+      }
+    }
+    
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.purple950,
@@ -174,6 +257,14 @@ class _MainScaffoldState extends State<MainScaffold> {
                     ),
                   );
                   break;
+                case '/help':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const HelpScreen(),
+                    ),
+                  );
+                  break;
                 case '/life-events':
                   Navigator.push(
                     context, 
@@ -204,6 +295,10 @@ class _MainScaffoldState extends State<MainScaffold> {
                 child: Text('Subscription', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
+                value: '/help',
+                child: Text('Help', style: TextStyle(color: Colors.white)),
+              ),
+              const PopupMenuItem(
                 value: '/life-events',
                 child: Text('Life Events', style: TextStyle(color: Colors.white)),
               ),
@@ -225,27 +320,150 @@ class _MainScaffoldState extends State<MainScaffold> {
     : BottomNavigationBar(
         currentIndex: (_selectedIndex == 3) ? 1 : _selectedIndex.clamp(0, 2),
         onTap: _onBottomNavTapped,
-        selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
+        selectedItemColor: Colors.white,
         backgroundColor: AppColors.purple950,
         type: BottomNavigationBarType.fixed,
-        showUnselectedLabels: false,
+        showUnselectedLabels: true,
         showSelectedLabels: true,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_box),
-            label: 'New Dream',
+        elevation: 8,
+        items: [
+          _buildNavItem(
+            // icon: Icons.psychology_alt,
+            icon: Icons.nightlight,
+            label: 'Add Dream',
+            index: 0,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.menu_book),
+          _buildNavItem(
+            icon: Icons.auto_stories_rounded,
             label: 'Journal',
+            index: 1,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.photo),
+          _buildNavItem(
+            icon: Icons.photo_library_rounded,
             label: 'Gallery',
+            index: 2,
           ),
         ],
       ),
     );
   }
+  
+  // Custom navigation item with dynamic size based on selection state
+  BottomNavigationBarItem _buildNavItem({
+    required IconData icon, 
+    required String label, 
+    required int index
+  }) {
+    // Get CURRENT subscription data directly from the provider
+    final subscriptionModel = Provider.of<SubscriptionModel>(context, listen: true);
+    
+    // Calculate current index for comparison (handle the special case for index 3)
+    final currentIdx = (_selectedIndex == 3) ? 1 : _selectedIndex.clamp(0, 2);
+    final isSelected = currentIdx == index;
+    
+    // Always use LATEST subscription data directly from the model
+    final bool isPro = subscriptionModel.loaded ? subscriptionModel.status.isActive : _isPro;
+    final int? textRemainingWeek = subscriptionModel.loaded ? subscriptionModel.status.textRemainingWeek : _textRemainingWeek;
+    
+    // Check if this is the New Dream button and user is out of credits
+    final bool isOutOfCredits = index == 0 && !isPro && (textRemainingWeek ?? 0) <= 0;
+    
+    // For debugging
+    if (index == 0) {
+      debugPrint('NEW DREAM BUTTON: isOutOfCredits=$isOutOfCredits, isPro=$isPro, textRemainingWeek=$textRemainingWeek');
+    }
+    
+    if (isOutOfCredits && index == 0) {
+      // Special treatment for disabled New Dream button
+      return BottomNavigationBarItem(
+        icon: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                // color: Colors.grey.shade700,
+                borderRadius: BorderRadius.circular(15),
+                // border: Border.all(color: Colors.red, width: 2),
+              ),
+              child: const Icon(Icons.sentiment_dissatisfied, 
+                size: 20.0, 
+                color: Colors.redAccent),
+            ),
+            Container(
+              margin: const EdgeInsets.only(bottom: 3),
+              child: Icon(
+                icon,
+                size: 20.0,
+                color: Colors.white70.withValues(alpha:0.0), // Faded icon behind lock
+              ),
+            ),
+          ],
+        ),
+        activeIcon: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade700,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.orange.shade300, width: 2),
+              ),
+              child: const Icon(Icons.lock, size: 20.0, color: Colors.white),
+            ),
+            Positioned(
+              bottom: -2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade900,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'UPGRADE',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        label: 'No dream credits',
+      );
+    }
+    
+    // Default navigation item for all other cases
+    return BottomNavigationBarItem(
+      icon: Container(
+        margin: const EdgeInsets.only(bottom: 3),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          child: Icon(
+            icon,
+            size: isSelected ? 25.0 : 20.0, // Selected icon is larger
+          ),
+        ),
+      ),
+      activeIcon: Container(
+        margin: const EdgeInsets.only(bottom: 3),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.purple800,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Icon(
+          icon,
+          size: 25.0,
+          color: Colors.white,
+        ),
+      ),
+      label: label,
+    );
+  }
 }
+

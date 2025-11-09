@@ -10,8 +10,6 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 // import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dreamr/utils/log.dart';
 import 'package:flutter/foundation.dart';
-
-// Needed for jsonEncode / jsonDecode
 import 'dart:convert';
 
 void initDio(Dio dio) {
@@ -25,6 +23,15 @@ void initDio(Dio dio) {
       error: true,
     ));
   }
+}
+
+// ---- Quota exceptions ----
+class QuotaExhaustedException implements Exception {
+  final String kind;        // "text" | "image"
+  final DateTime? nextReset;
+  QuotaExhaustedException({required this.kind, this.nextReset});
+  @override
+  String toString() => 'QuotaExhausted($kind, next=$nextReset)';
 }
 
 // ---- Notes support (top-level) ----
@@ -158,9 +165,17 @@ class ApiService {
   static Future<SubscriptionStatus> getSubscriptionStatus() async {
     try {
       final res = await DioClient.dio.get('/api/subscription/status',
-        options: Options(validateStatus: (status) => status == 200),
+        // options: Options(validateStatus: (status) => status == 200),
       );
-      return SubscriptionStatus.fromJson(res.data);
+      debugPrint('SUB API status=${res.statusCode} url=${res.realUri}');
+      debugPrint('SUB API headers auth=${res.requestOptions.headers['Authorization']}');
+      debugPrint('SUB API body=${res.data}');
+
+      final Map<String, dynamic> body =
+        res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : {};
+
+      // return SubscriptionStatus.fromJson(res.data);
+      return SubscriptionStatus.fromJson(body);
     } catch (e) {
       // If there's an error, return a default free tier status
       return SubscriptionStatus.free();
@@ -389,6 +404,15 @@ class ApiService {
         'is_question': data['is_question'] == true,
         'should_generate_image': data['should_generate_image'] == true,
       };
+    }
+    if (response.statusCode == 402) {
+      final m = response.data is Map ? Map<String, dynamic>.from(response.data) : const {};
+      final kind = (m['kind']?.toString() ?? 'text');
+      final iso = m['next_reset_iso']?.toString();
+      throw QuotaExhaustedException(
+        kind: kind,
+        nextReset: (iso != null && iso.isNotEmpty) ? DateTime.parse(iso) : null,
+      );
     } else {
       throw Exception('Dream submission failed: ${response.statusMessage}');
     }
@@ -416,6 +440,10 @@ class ApiService {
       if (res.statusCode == 202) {
         // Backend didn’t return a URL; client should NOT spin forever
         throw Exception('image_generate returned 202 (still processing)');
+      }
+      if (res.statusCode == 402) {
+        final m = res.data is Map ? Map<String, dynamic>.from(res.data) : const {};
+        throw QuotaExhaustedException(kind: (m['kind']?.toString() ?? 'image'));
       }
       if (res.statusCode != 200) {
         throw Exception('image_generate HTTP ${res.statusCode}');
