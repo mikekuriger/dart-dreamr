@@ -8,12 +8,21 @@ import 'package:dreamr/screens/dream_journal_screen.dart';
 import 'package:dreamr/screens/dream_journal_editor_screen.dart';
 import 'package:dreamr/screens/dream_gallery_screen.dart';
 import 'package:dreamr/screens/profile_screen.dart';
+import 'package:dreamr/screens/settings_screen.dart';
 import 'package:dreamr/screens/subscription_screen.dart';
 import 'package:dreamr/screens/life_events_screen.dart';
 import 'package:dreamr/screens/help_screen.dart';
 import 'package:dreamr/constants.dart';
 import 'package:dreamr/utils/session_manager.dart';
 import 'package:dreamr/state/subscription_model.dart';
+
+// Refresh triggers for each screen
+final ValueNotifier<int> dreamEntryRefreshTrigger = ValueNotifier<int>(0);
+final ValueNotifier<int> journalRefreshTrigger = ValueNotifier<int>(0);
+final ValueNotifier<int> galleryRefreshTrigger = ValueNotifier<int>(0);
+final ValueNotifier<int> profileRefreshTrigger = ValueNotifier<int>(0);
+final ValueNotifier<int> editorRefreshTrigger = ValueNotifier<int>(0);
+final ValueNotifier<int> settingsRefreshTrigger = ValueNotifier<int>(0);
 
 
 class MainScaffold extends StatefulWidget {
@@ -249,6 +258,16 @@ class _MainScaffoldState extends State<MainScaffold> {
                     _selectedIndex = 4; 
                   });
                   break;
+                case '/settings':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SettingsScreen(
+                        refreshTrigger: settingsRefreshTrigger,
+                      ),
+                    ),
+                  );
+                  break;
                 case '/subscription':
                   Navigator.push(
                     context, 
@@ -289,6 +308,10 @@ class _MainScaffoldState extends State<MainScaffold> {
               const PopupMenuItem(
                 value: '/profile',
                 child: Text('Profile', style: TextStyle(color: Colors.white)),
+              ),
+              const PopupMenuItem(
+                value: '/settings',
+                child: Text('Settings', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
                 value: '/subscription',

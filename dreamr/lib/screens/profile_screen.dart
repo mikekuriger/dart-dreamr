@@ -1,7 +1,9 @@
 // screens/profile_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:dreamr/theme/colors.dart';
 import 'package:dreamr/services/api_service.dart';
+import 'package:dreamr/state/subscription_model.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ValueNotifier<int> refreshTrigger;
@@ -19,7 +21,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _firstName;
   String? _gender;
   DateTime? _birthdate;
-  bool _enableAudio = false;
   String _subscriptionTier = 'free';
 
   bool _loading = true;
@@ -28,6 +29,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _loadProfile();
+    
+    // Refresh subscription data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<SubscriptionModel>(context, listen: false).refresh();
+    });
   }
 
   Future<void> _loadProfile() async {
@@ -40,7 +46,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _birthdate = (data['birthdate'] != null && data['birthdate'] != '')
             ? DateTime.parse(data['birthdate'])
             : null;
-        _enableAudio = data['enable_audio'] == true || data['enable_audio'] == '1';
         _subscriptionTier = data['subscription_tier'] ?? 'free';
         _loading = false;
       });
@@ -56,7 +61,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         firstName: _firstName ?? '',
         gender: _gender ?? '',
         birthdate: _birthdate,
-        enableAudio: _enableAudio,
       );
 
       widget.refreshTrigger.value++;
@@ -89,262 +93,252 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
       filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.05),
+      fillColor: Colors.white.withOpacity(0.05),
     );
   }
 
+  Widget _buildLoadingWidget() {
+    return const Center(child: CircularProgressIndicator());
+  }
+
+  Widget _buildProfileContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Email display
+          Text(
+            _email ?? 'unknown',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+
+          // Subscription section
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 20),
+            decoration: BoxDecoration(
+              color: AppColors.purple950,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Consumer<SubscriptionModel>(
+                  builder: (context, subscriptionModel, _) {
+                    final tier = subscriptionModel.status.tier;
+                    final isFree = tier == 'free';
+                    return Row(
+                      children: [
+                        Icon(
+                          isFree ? Icons.star_border : Icons.star,
+                          color: isFree ? Colors.grey : Colors.amber,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Subscription: ${tier.toUpperCase()}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pushNamed('/subscription');
+                    },
+                    icon: const Icon(Icons.card_membership, size: 18),
+                    label: const Text('Manage Subscription'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurpleAccent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Form Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.purple950,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // First name
+                  TextFormField(
+                    initialValue: _firstName,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _inputDecoration('First Name'),
+                    onChanged: (val) => _firstName = val,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Gender
+                  DropdownButtonFormField<String>(
+                    initialValue: _gender?.isNotEmpty == true ? _gender : null,
+                    decoration: _inputDecoration('Gender'),
+                    dropdownColor: AppColors.purple950,
+                    style: const TextStyle(color: Colors.white),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'male',
+                        child: Text("Male"),
+                      ),
+                      DropdownMenuItem(
+                        value: 'female',
+                        child: Text("Female"),
+                      ),
+                      DropdownMenuItem(
+                        value: 'other',
+                        child: Text("Prefer not to answer"),
+                      ),
+                    ],
+                    onChanged: (val) => _gender = val,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Birthdate
+                  InkWell(
+                    onTap: () async {
+                      DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: _birthdate ?? DateTime(2000),
+                        firstDate: DateTime(1900),
+                        lastDate: DateTime.now(),
+                        builder: (context, child) {
+                          return Theme(
+                            data: ThemeData.dark().copyWith(
+                              colorScheme: const ColorScheme.dark(
+                                primary: Colors.deepPurple,
+                                surface: Colors.black87,
+                              ),
+                            ),
+                            child: child!,
+                          );
+                        },
+                      );
+                      if (picked != null) setState(() => _birthdate = picked);
+                    },
+                    child: InputDecorator(
+                      decoration: _inputDecoration('Birthdate'),
+                      child: Text(
+                        _birthdate == null
+                            ? 'Tap to select'
+                            : _birthdate!.toLocal().toString().split(' ')[0],
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 30),
+
+                  // Buttons
+                  Row(
+                    children: [
+                      // Cancel button
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            widget.onDone?.call();
+                          },
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.white70),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: const Text(
+                            "Cancel",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Save button
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _saveProfile,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurpleAccent,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: const Text(
+                            "Save",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.purple900,
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // 📧 EMAIL DISPLAY
-                  Text(
-                    _email ?? 'unknown', // store email in state
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
-
-                  // 💎 SUBSCRIPTION SECTION
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: AppColors.purple800,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              _subscriptionTier == 'free' ? Icons.star_border : Icons.star,
-                              color: _subscriptionTier == 'free' ? Colors.grey : Colors.amber,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Subscription: ${_subscriptionTier.toUpperCase()}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).pushNamed('/subscription');
-                            },
-                            icon: const Icon(Icons.card_membership, size: 18),
-                            label: const Text('Manage Subscription'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.deepPurpleAccent,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // 🖼️ AVATAR (future)
-                  // CircleAvatar(
-                  //   radius: 40,
-                  //   backgroundColor: Colors.white24,
-                  //   child: const Icon(Icons.person, size: 40, color: Colors.white),
-                  // ),
-                  // const SizedBox(height: 30),
-
-                  // 📝 FORM CARD
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.purple950,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // FIRST NAME
-                          TextFormField(
-                            initialValue: _firstName,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: _inputDecoration('First Name'),
-                            onChanged: (val) => _firstName = val,
-                          ),
-                          const SizedBox(height: 20),
-
-                          // GENDER
-                          DropdownButtonFormField<String>(
-                            initialValue: _gender?.isNotEmpty == true ? _gender : null,
-                            decoration: _inputDecoration('Gender'),
-                            dropdownColor: AppColors.purple950,
-                            style: const TextStyle(color: Colors.white),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'male',
-                                child: Text("Male"),
-                              ),
-                              DropdownMenuItem(
-                                value: 'female',
-                                child: Text("Female"),
-                              ),
-                              DropdownMenuItem(
-                                value: 'other',
-                                child: Text("Prefer not to answer"),
-                              ),
-                            ],
-                            onChanged: (val) => _gender = val,
-                          ),
-                          const SizedBox(height: 20),
-
-                          // BIRTHDATE
-                          InkWell(
-                            onTap: () async {
-                              DateTime? picked = await showDatePicker(
-                                context: context,
-                                initialDate: _birthdate ?? DateTime(2000),
-                                firstDate: DateTime(1900),
-                                lastDate: DateTime.now(),
-                                builder: (context, child) {
-                                  return Theme(
-                                    data: ThemeData.dark().copyWith(
-                                      colorScheme: const ColorScheme.dark(
-                                        primary: Colors.deepPurple,
-                                        surface: Colors.black87,
-                                      ),
-                                    ),
-                                    child: child!,
-                                  );
-                                },
-                              );
-                              if (picked != null) setState(() => _birthdate = picked);
-                            },
-                            child: InputDecorator(
-                              decoration: _inputDecoration('Birthdate'),
-                              child: Text(
-                                _birthdate == null
-                                    ? 'Tap to select'
-                                    : _birthdate!.toLocal().toString().split(' ')[0],
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-
-                          // AUDIO SWITCH
-                          SwitchListTile(
-                            title: Text(
-                              _enableAudio ? "Audio Enabled" : "Audio Disabled",
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                            value: _enableAudio,
-                            onChanged: (val) => setState(() => _enableAudio = val),
-                            activeColor: Colors.white,
-                            inactiveThumbColor: Colors.grey,
-                            inactiveTrackColor: Colors.white30,
-                          ),
-
-                          const SizedBox(height: 30),
-
-                          // CANCEL and SAVE BUTTONs
-                          Row(
-                            children: [
-                              // ✅ Cancel button
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () {
-                                    // just go back to previous page (journal)
-                                    widget.onDone?.call();
-                                  },
-                                  style: OutlinedButton.styleFrom(
-                                    side: const BorderSide(color: Colors.white70),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                  ),
-                                  child: const Text(
-                                    "Cancel",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // ✅ Save button
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: _saveProfile,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.deepPurpleAccent,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                  ),
-                                  child: const Text(
-                                    "Save",
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      body: SafeArea(
+        bottom: true,
+        child: _loading ? _buildLoadingWidget() : _buildProfileContent(),
+      ),
     );
   }
 }

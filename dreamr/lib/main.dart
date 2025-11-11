@@ -20,9 +20,11 @@ import 'package:dreamr/constants.dart';
 import 'package:dreamr/repository/dream_repository.dart';
 import 'package:dreamr/state/dream_list_model.dart';
 import 'package:dreamr/state/subscription_model.dart';
+import 'package:dreamr/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService().init();
   await DioClient.init();
 
   runApp(

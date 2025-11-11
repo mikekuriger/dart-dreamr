@@ -1,12 +1,16 @@
 plugins {
     id("com.android.application")
-    id("kotlin-android")
+    // id("kotlin-android")
+    id("org.jetbrains.kotlin.android")
+
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 import java.util.Properties
 import java.io.FileInputStream
+import org.gradle.api.JavaVersion
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
@@ -22,13 +26,24 @@ android {
     // ndkVersion = flutter.ndkVersion
     ndkVersion = "27.0.12077973"
 
+    // compileOptions {
+    //     sourceCompatibility = JavaVersion.VERSION_11
+    //     targetCompatibility = JavaVersion.VERSION_11
+    // }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
+    }
+    
+    lintOptions {
+        disable("Instantiatable", "MissingClass")
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        // jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "17" 
     }
 
     defaultConfig {
@@ -59,6 +74,11 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
     }
+}
+
+dependencies {
+    // implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
 
 flutter {
