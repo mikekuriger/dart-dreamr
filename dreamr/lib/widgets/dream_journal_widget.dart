@@ -13,10 +13,12 @@ import 'package:share_plus/share_plus.dart';
 
 class DreamJournalWidget extends StatefulWidget { 
   final VoidCallback? onDreamsLoaded;
+  final List<Dream>? filteredDreams;
 
   const DreamJournalWidget({
     super.key,
     this.onDreamsLoaded,
+    this.filteredDreams,
   });
 
   @override
@@ -232,7 +234,8 @@ class _NotesSheetState extends State<NotesSheet> {
 class DreamJournalWidgetState extends State<DreamJournalWidget> {
   
   List<Dream> _dreams = [];
-  List<Dream> getDreams() => _dreams;
+  // Return filtered dreams if available, otherwise return all dreams
+  List<Dream> getDreams() => widget.filteredDreams ?? _dreams;
 
   final Map<int, bool> _expanded = {};
   bool _loading = true;
@@ -497,7 +500,9 @@ Rect _originFromKey(GlobalKey key) {
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
 
-    if (_dreams.isEmpty) return const Text("Your Dreams will appear here...");
+    // Use getDreams() to get either filtered dreams or all dreams
+    final dreamsToDisplay = getDreams();
+    if (dreamsToDisplay.isEmpty) return const Text("Your Dreams will appear here...");
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 0), // remove side gap
@@ -505,9 +510,9 @@ Rect _originFromKey(GlobalKey key) {
         padding: EdgeInsets.zero, 
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        itemCount: _dreams.length,
+        itemCount: dreamsToDisplay.length,
         itemBuilder: (context, index) {
-          final dream = _dreams[index];
+          final dream = dreamsToDisplay[index];
           final isExpanded = _expanded[dream.id] ?? false;
           final toneStyle = _getToneStyle(dream.tone);
 
@@ -520,7 +525,7 @@ Rect _originFromKey(GlobalKey key) {
               padding: const EdgeInsets.all(8), // inner padding inside the white box
               decoration: BoxDecoration(
                 color: toneStyle.background,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: toneStyle.text.withValues(alpha: 0.5), width: 1),
               ),
               child: Column(

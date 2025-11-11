@@ -241,7 +241,8 @@ class _MainScaffoldState extends State<MainScaffold> {
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu, color: Colors.white),
-            color: AppColors.purple850,
+            color: Colors.grey[850],
+            // color: AppColors.purple900,
             onSelected: (String route) async {
               // ✅ force keyboard to close when selecting from menu
               FocusScope.of(context).unfocus();

@@ -17,6 +17,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _enableAudio = false;
   bool _enableNotifications = false;
   TimeOfDay _notificationTime = const TimeOfDay(hour: 8, minute: 0);
+  bool _showDreamStats = true;  // New preference
+  bool _showDreamCalendar = true;  // New preference
 
   bool _loading = true;
   final NotificationService _notificationService = NotificationService();
@@ -35,16 +37,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // This would come from API in a real app, but for now we're just using shared prefs
       final prefs = await SharedPreferences.getInstance();
       final audioEnabled = prefs.getBool('enable_audio') ?? false;
+      final showDreamStats = prefs.getBool('show_dream_stats') ?? true;
+      final showDreamCalendar = prefs.getBool('show_dream_calendar') ?? true;
       
       setState(() {
         _enableNotifications = enabled;
         _notificationTime = time;
         _enableAudio = audioEnabled;
+        _showDreamStats = showDreamStats;
+        _showDreamCalendar = showDreamCalendar;
         _loading = false;
       });
     } catch (e) {
       debugPrint('❌ Failed to load settings: $e');
       setState(() => _loading = false);
+    }
+  }
+
+  // Save dream stats visibility setting
+  Future<void> _saveDreamStatsVisibility(bool value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('show_dream_stats', value);
+      widget.refreshTrigger.value++;
+      
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Dream stats visibility setting saved'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      debugPrint('❌ Failed to save dream stats visibility setting: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ Failed to save dream stats visibility setting')),
+      );
+    }
+  }
+
+  // Save dream calendar visibility setting
+  Future<void> _saveDreamCalendarVisibility(bool value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('show_dream_calendar', value);
+      widget.refreshTrigger.value++;
+      
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Dream calendar visibility setting saved'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      debugPrint('❌ Failed to save dream calendar visibility setting: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ Failed to save dream calendar visibility setting')),
+      );
     }
   }
 
@@ -240,6 +292,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       }
                     },
                   ),
+
+                  // Dream Journal Stats Visibility toggle
+                  SwitchListTile(
+                    title: Text(
+                      _showDreamStats ? "Dream Stats Visible" : "Dream Stats Hidden",
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    subtitle: const Text(
+                      "Show statistics section in Dream Journal",
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    value: _showDreamStats,
+                    onChanged: (val) {
+                      setState(() => _showDreamStats = val);
+                      _saveDreamStatsVisibility(val);
+                    },
+                    activeThumbColor: Colors.white,
+                    inactiveThumbColor: Colors.grey,
+                    inactiveTrackColor: Colors.white30,
+                  ),
+                  
+                  // Dream Journal Calendar Visibility toggle
+                  SwitchListTile(
+                    title: Text(
+                      _showDreamCalendar ? "Dream Calendar Visible" : "Dream Calendar Hidden",
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    subtitle: const Text(
+                      "Show calendar section in Dream Journal",
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    value: _showDreamCalendar,
+                    onChanged: (val) {
+                      setState(() => _showDreamCalendar = val);
+                      _saveDreamCalendarVisibility(val);
+                    },
+                    activeThumbColor: Colors.white,
+                    inactiveThumbColor: Colors.grey,
+                    inactiveTrackColor: Colors.white30,
+                  ),
+
                 ],
               ],
             ),

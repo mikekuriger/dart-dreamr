@@ -1,10 +1,17 @@
 // screens/dream_journal_screen.dart
+// ignore_for_file: unused_field
+
 import 'package:dreamr/widgets/main_scaffold.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dreamr/widgets/dream_journal_widget.dart';
 import 'package:dreamr/constants.dart';
 import 'package:dreamr/services/api_service.dart';
+import 'package:intl/intl.dart';
+import 'package:dreamr/models/dream.dart';
 
+// Custom enum to replace missing CalendarFormat
+enum CalendarFormat { month, week }
 
 class DreamJournalScreen extends StatefulWidget {
   final ValueNotifier<int> refreshTrigger;
@@ -18,22 +25,6 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
   bool _statsExpanded = false;
   Map<String, int> _toneCounts = {};
 
-  //For Calendar
-  // DateTime _focusedDay = DateTime.now();
-  // DateTime? _selectedDay;
-  // List<Dream> _allDreams = [];
-  // Set<DateTime> _dreamDates = {};
-
-  // final ScrollController _scrollController = ScrollController();
-  // void _scrollToTop() {
-  //   _scrollController.animateTo(
-  //     0.0,
-  //     duration: const Duration(milliseconds: 300),
-  //     curve: Curves.easeOut,
-  //   );
-  // }
-
-
   // state fields
   int _dreamCount = 0;
   String _mostCommonTone = '';
@@ -45,16 +36,41 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
   bool _quotaLoading = false;
   String? _quotaError;
   bool? _isPro; // null = loading
+  
+  // Calendar state
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
+  CalendarFormat _calendarFormat = CalendarFormat.month;
+  bool _showCalendar = false; // Collapsed by default
+  Map<DateTime, List<Dream>> _dreamsByDate = {};
+  
+  // Visibility preferences
+  bool _showStatsSection = true; // Controls if stats section is shown at all
+  bool _showCalendarSection = true; // Controls if calendar section is shown at all
 
+
+  // Load visibility preferences from SharedPreferences
+  Future<void> _loadVisibilityPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _showStatsSection = prefs.getBool('show_dream_stats') ?? true;
+        _showCalendarSection = prefs.getBool('show_dream_calendar') ?? true;
+      });
+    } catch (e) {
+      debugPrint('❌ Failed to load visibility preferences: $e');
+    }
+  }
 
   @override
   void initState() {
     super.initState();
 
+    // Load visibility preferences
+    _loadVisibilityPreferences();
+
     // Initial load after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // _loadStats();
-      // await _loadQuota();
       _refreshStats();
     });
 
@@ -134,11 +150,82 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
     }
   }
 
+  // Organize dreams by date for calendar
+  void _organizeDreamsByDate() {
+    final dreams = _journalKey.currentState?.getDreams() ?? [];
+    final Map<DateTime, List<Dream>> dreamsByDate = {};
+
+    for (final dream in dreams) {
+      // Create date key with just year, month, day (no time)
+      final date = DateTime(
+        dream.createdAt.year,
+        dream.createdAt.month,
+        dream.createdAt.day,
+      );
+
+      if (dreamsByDate[date] == null) {
+        dreamsByDate[date] = [];
+      }
+      dreamsByDate[date]!.add(dream);
+    }
+
+    setState(() {
+      _dreamsByDate = dreamsByDate;
+    });
+  }
+
   Future<void> _refreshStats() async {
     _loadStats();          // local aggregates
     await _loadQuota();    // network
+    _organizeDreamsByDate(); // For calendar
   }
 
+  // Helper for calendar - check if two dates are the same day
+  bool isSameDay(DateTime? a, DateTime? b) {
+    if (a == null || b == null) {
+      return false;
+    }
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  // Get filtered dreams for the selected date
+  List<Dream> getFilteredDreams() {
+    final allDreams = _journalKey.currentState?.getDreams() ?? [];
+    
+    if (_selectedDay == null) {
+      return allDreams; // Return all dreams if no date is selected
+    }
+    
+    // Filter dreams for the selected day
+    return allDreams.where((dream) {
+      final dreamDate = DateTime(
+        dream.createdAt.year, 
+        dream.createdAt.month, 
+        dream.createdAt.day
+      );
+      
+      final selectedDate = DateTime(
+        _selectedDay!.year, 
+        _selectedDay!.month, 
+        _selectedDay!.day
+      );
+      
+      return dreamDate.isAtSameMomentAs(selectedDate);
+    }).toList();
+  }
+
+  // Check if a specific day has dreams
+  bool hasDreamsOnDay(DateTime day) {
+    final normalizedDay = DateTime(day.year, day.month, day.day);
+    return _dreamsByDate.containsKey(normalizedDay) && 
+           _dreamsByDate[normalizedDay]!.isNotEmpty;
+  }
+
+  // Get number of dreams for a specific day
+  int dreamCountForDay(DateTime day) {
+    final normalizedDay = DateTime(day.year, day.month, day.day);
+    return _dreamsByDate[normalizedDay]?.length ?? 0;
+  }
   
   // Generate a consistent color for each mood
   Color _getMoodColor(String mood) {
@@ -259,6 +346,198 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
     }).toList();
   }
 
+  // Build compact calendar
+  Widget _buildCalendar() {
+    // Get current month info
+    final firstDayOfMonth = DateTime(_focusedDay.year, _focusedDay.month, 1);
+    final lastDayOfMonth = DateTime(_focusedDay.year, _focusedDay.month + 1, 0);
+    
+    // Calculate days from previous month to show
+    final firstWeekday = firstDayOfMonth.weekday % 7; // 0 = Sunday, 1 = Monday, etc.
+    
+    // Generate dates for the grid
+    final List<DateTime> calendarDates = [];
+    
+    // Add days from previous month
+    for (var i = 0; i < firstWeekday; i++) {
+      calendarDates.add(firstDayOfMonth.subtract(Duration(days: firstWeekday - i)));
+    }
+    
+    // Add days from current month
+    for (var i = 1; i <= lastDayOfMonth.day; i++) {
+      calendarDates.add(DateTime(_focusedDay.year, _focusedDay.month, i));
+    }
+    
+    // Add days from next month to complete the grid (to multiple of 7)
+    final remainingDays = 7 - (calendarDates.length % 7);
+    if (remainingDays < 7) {
+      for (var i = 1; i <= remainingDays; i++) {
+        calendarDates.add(DateTime(_focusedDay.year, _focusedDay.month + 1, i));
+      }
+    }
+    
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Header with month name and navigation buttons - more compact
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.chevron_left, color: Colors.white, size: 18),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              iconSize: 18,
+              onPressed: () {
+                setState(() {
+                  _focusedDay = DateTime(_focusedDay.year, _focusedDay.month - 1, 1);
+                });
+              },
+            ),
+            Text(
+              DateFormat.yMMM().format(_focusedDay), // Shorter month format
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.chevron_right, color: Colors.white, size: 18),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              iconSize: 18,
+              onPressed: () {
+                setState(() {
+                  _focusedDay = DateTime(_focusedDay.year, _focusedDay.month + 1, 1);
+                });
+              },
+            ),
+          ],
+        ),
+        
+        // Days of week headers - more compact
+        Padding(
+          padding: const EdgeInsets.only(top: 4.0, bottom: 4.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: const [
+              Text('S', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+              Text('M', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+              Text('T', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+              Text('W', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+              Text('T', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+              Text('F', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+              Text('S', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+        
+        // Calendar grid - more compact
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            childAspectRatio: 1.0,
+            crossAxisSpacing: 2,
+            mainAxisSpacing: 2,
+            mainAxisExtent: 28, // Fixed smaller height
+          ),
+          itemCount: calendarDates.length,
+          itemBuilder: (context, index) {
+            final date = calendarDates[index];
+            final isThisMonth = date.month == _focusedDay.month;
+            final isToday = isSameDay(date, DateTime.now());
+            final isSelected = isSameDay(date, _selectedDay);
+            final hasDreams = hasDreamsOnDay(date);
+            final dreamCount = dreamCountForDay(date);
+            
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  // Toggle selection if the same day is tapped
+                  if (isSameDay(date, _selectedDay)) {
+                    _selectedDay = null;
+                  } else {
+                    _selectedDay = date;
+                  }
+                  // Force refresh the dream list when a date is selected
+                  _journalKey.currentState?.refresh();
+                });
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isSelected 
+                    ? Colors.deepPurple 
+                    : isToday 
+                      ? Colors.deepPurple.shade100.withValues(alpha: 0.3) 
+                      : null,
+                  borderRadius: BorderRadius.circular(4), // Smaller radius
+                  border: hasDreams 
+                    ? Border.all(color: Colors.deepPurple.shade300, width: 1) // Thinner border
+                    : null,
+                ),
+                child: Stack(
+                  children: [
+                    // Day number
+                    Center(
+                      child: Text(
+                        date.day.toString(),
+                        style: TextStyle(
+                          fontSize: 12, // Smaller font
+                          color: isThisMonth 
+                            ? isSelected 
+                              ? Colors.white 
+                              : [DateTime.saturday, DateTime.sunday].contains(date.weekday) 
+                                ? Colors.grey.shade400 
+                                : Colors.white
+                            : Colors.grey.shade700,
+                          fontWeight: isToday || isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                    
+                    // Dream indicators - more compact
+                    if (hasDreams)
+                      Positioned(
+                        bottom: 2, // Move up slightly
+                        right: 0,
+                        left: 0,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                                for (var i = 0; i < (dreamCount < 3 ? dreamCount : 3); i++)
+                              Container(
+                                width: 4, // Smaller dots
+                                height: 4, // Smaller dots
+                                decoration: BoxDecoration(
+                                  color: Colors.deepPurple.shade300,
+                                  shape: BoxShape.circle,
+                                ),
+                                margin: const EdgeInsets.symmetric(horizontal: 1),
+                              ),
+                            if (dreamCount > 3)
+                              Text(
+                                '+${dreamCount - 3}',
+                                style: TextStyle(
+                                  color: Colors.deepPurple.shade200,
+                                  fontSize: 6, // Smaller text
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
   @override
   void dispose() {
     widget.refreshTrigger.removeListener(_refreshJournal);
@@ -274,14 +553,17 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
         // _loadStats();
         // await _loadQuota();
         _refreshStats();
+        _loadVisibilityPreferences(); // Reload preferences
       },
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(4),  // side spacing
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           children: [
+            // Stats section - only show if preference is enabled
+            if (_showStatsSection)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
               child: GestureDetector(
                 onTap: () {
                   setState(() {
@@ -292,10 +574,10 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(12), // height of stat box
                   decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 0, 0, 0).withValues(alpha: 0.45),
-                    // color: AppColors.purple850,
+                    color: const Color.fromARGB(255, 0, 0, 0).withValues(alpha: 0.4),
+                    // color: AppColors.purple850, TOP yellow border
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: const Color.fromARGB(255, 170, 153, 1),
@@ -473,14 +755,166 @@ class _DreamJournalScreenState extends State<DreamJournalScreen> {
                 ),
               ),
             ),
-            DreamJournalWidget(
-              key: _journalKey,
-              // onDreamsLoaded: _loadStats,
-              onDreamsLoaded: _refreshStats,
+            
+            // Calendar section - only show if preference is enabled
+            if (_showCalendarSection)
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.all(12),  // calendar box height
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.deepPurple.shade300,
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Calendar header with expandable toggle
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        // Toggle calendar content visibility
+                        _showCalendar = !_showCalendar;
+                      });
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "✨ Dream Calendar", 
+                          style: TextStyle(
+                            fontSize: 14, 
+                            // fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Icon(
+                          _showCalendar ? Icons.expand_less : Icons.expand_more,
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Calendar content - only show when expanded
+                  if (_showCalendar) ...[
+                    const SizedBox(height: 8), // Space after header
+                    _buildCalendar(),
+                  
+                    // Show selected date indicator and clear button - smaller version
+                    if (_selectedDay != null) 
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.deepPurple.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.deepPurple.shade200, width: 0.5),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(Icons.calendar_today, size: 14, color: Colors.white70),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                "Date: ${DateFormat('MMM d, y').format(_selectedDay!)}", // Shorter date format
+                                style: TextStyle(
+                                  color: Colors.white, 
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 13,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                                minimumSize: Size(0, 24),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _selectedDay = null;
+                                  // Refresh dream list when filter is cleared
+                                  _journalKey.currentState?.refresh();
+                                });
+                              },
+                              child: Text(
+                                "Clear", 
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.deepPurple.shade100,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+            ),
+
+            // Dream list with filtered dreams
+            Builder(
+              builder: (context) {
+                final filteredDreams = getFilteredDreams();
+                
+                // Show message if no dreams match the selected date
+                if (_selectedDay != null && filteredDreams.isEmpty) {
+                  return Container(
+                    margin: const EdgeInsets.only(top: 20, bottom: 20),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.black45,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'No dreams recorded on ${DateFormat('EEE, MMM d, y').format(_selectedDay!)}',
+                          style: const TextStyle(color: Colors.white70, fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.clear),
+                          label: const Text('Clear Date Filter'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurple.shade300,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _selectedDay = null;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                // Show dream list with filtered dreams if available
+                return DreamJournalWidget(
+                  key: _journalKey,
+                  onDreamsLoaded: _refreshStats,
+                  filteredDreams: _selectedDay != null ? filteredDreams : null,
+                );
+              },
             ),
           ],
         ),
       ),
     );
   }
+}
+
+// Helper function
+int min(int a, int b) {
+  return a < b ? a : b;
 }
