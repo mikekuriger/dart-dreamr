@@ -241,7 +241,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu, color: Colors.white),
-            color: AppColors.purple950,
+            color: AppColors.purple850,
             onSelected: (String route) async {
               // ✅ force keyboard to close when selecting from menu
               FocusScope.of(context).unfocus();
@@ -303,31 +303,72 @@ class _MainScaffoldState extends State<MainScaffold> {
             itemBuilder: (BuildContext context) => [
               const PopupMenuItem(
                 value: '/editor',
-                child: Text('Hide/Delete', style: TextStyle(color: Colors.white)),
+                child: Row(
+                  children: [
+                    Icon(Icons.visibility_off_outlined, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('Hide/Delete', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
               ),
               const PopupMenuItem(
                 value: '/profile',
-                child: Text('Profile', style: TextStyle(color: Colors.white)),
+                child: Row(
+                  children: [
+                    Icon(Icons.person_outline, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('Profile', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
               ),
               const PopupMenuItem(
                 value: '/settings',
-                child: Text('Settings', style: TextStyle(color: Colors.white)),
-              ),
-              const PopupMenuItem(
-                value: '/subscription',
-                child: Text('Subscription', style: TextStyle(color: Colors.white)),
-              ),
-              const PopupMenuItem(
-                value: '/help',
-                child: Text('Help', style: TextStyle(color: Colors.white)),
+                child: Row(
+                  children: [
+                    Icon(Icons.settings_outlined, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('Settings', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
               ),
               const PopupMenuItem(
                 value: '/life-events',
-                child: Text('Life Events', style: TextStyle(color: Colors.white)),
+                child: Row(
+                  children: [
+                    Icon(Icons.favorite_outline, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('Life Events', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),const PopupMenuItem(
+                value: '/subscription',
+                child: Row(
+                  children: [
+                    Icon(Icons.star_outline, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('Subscription', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: '/help',
+                child: Row(
+                  children: [
+                    Icon(Icons.help_outline, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('Help', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
               ),
               const PopupMenuItem(
                 value: 'logout',
-                child: Text('Logout', style: TextStyle(color: Colors.white)),
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('Logout', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
               ),
             ],
           ),

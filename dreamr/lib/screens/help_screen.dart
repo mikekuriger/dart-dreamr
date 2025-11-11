@@ -72,7 +72,7 @@ class HelpScreen extends StatelessWidget {
             _buildSection(
               title: 'Getting Started',
               icon: Icons.start,
-              content: 'Dreamr is your personal AI-powered dream analysis app. Record your dreams and get personalized interpretations, along with generated dream images that capture the essence of your dreams.',
+              content: 'Dreamr ✨ is your personal dream analysis and journal app. Record your dreams and get personalized interpretations, along with generated images that capture the essence of your dreams.',
             ),
             
             // Dream Analysis Section
@@ -96,8 +96,7 @@ class HelpScreen extends StatelessWidget {
                 '• Access it through the "Journal" tab in the navigation bar\n'
                 '• View your dreams chronologically\n'
                 '• Tap on any entry to see the full analysis and image\n'
-                '• Swipe down to refresh your journal with new entries\n'
-                '• Long-press on an entry to pin important dreams to the top',
+                '• Swipe down to refresh your journal with new entries',
             ),
             
             // Dream Gallery Section
@@ -107,14 +106,13 @@ class HelpScreen extends StatelessWidget {
               content: 'View all your dream images in one place:\n\n'
                 '• Access through the "Gallery" tab in the navigation bar\n'
                 '• Tap on an image to view it in full screen\n'
-                '• Share images with friends directly from the gallery\n'
-                '• Pro users get higher quality dream images and more styles',
+                '• Share images with friends directly from the gallery',
             ),
             
             // Life Events Section
             _buildSection(
               title: 'Life Events',
-              icon: Icons.calendar_today,
+              icon: Icons.favorite,
               content: 'Track important life events that might influence your dreams:\n\n'
                 '• Access through the hamburger menu → Life Events\n'
                 '• Add significant events like travel, stress, medication, etc.\n'
@@ -126,11 +124,11 @@ class HelpScreen extends StatelessWidget {
             _buildSection(
               title: 'Managing Your Account',
               icon: Icons.manage_accounts,
-              content: 'Access account features through the hamburger menu or profile tab:\n\n'
+              content: 'Access account profile and settings through the hamburger menu:\n\n'
                 '• View and edit your profile information\n'
                 '• Manage your subscription\n'
-                '• Change your password\n'
                 '• Enable or disable features\n'
+                '• Update your password\n'
                 '• Log out of your account',
             ),
             
@@ -140,10 +138,8 @@ class HelpScreen extends StatelessWidget {
               icon: Icons.stars,
               content: 'Understanding your dream credits:\n\n'
                 '• Free users get 2 dream analyses per week\n'
-                '• Credits refresh every Sunday\n'
                 '• Pro subscribers get unlimited dream analyses\n'
-                '• Upgrade through the hamburger menu → Subscription\n'
-                '• Pro users also get higher quality dream images and priority support',
+                '• Upgrade through the hamburger menu → Subscription\n',
             ),
             
             // Contact Section

@@ -16,12 +16,22 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _passwordFormKey = GlobalKey<FormState>();
 
   String? _email;
   String? _firstName;
   String? _gender;
   DateTime? _birthdate;
   String _subscriptionTier = 'free';
+
+  // Password change fields
+  final TextEditingController _currentPasswordController = TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  bool _currentPasswordVisible = false;
+  bool _newPasswordVisible = false;
+  bool _confirmPasswordVisible = false;
+  bool _changingPassword = false;
 
   bool _loading = true;
 
@@ -34,6 +44,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<SubscriptionModel>(context, listen: false).refresh();
     });
+  }
+  
+  @override
+  void dispose() {
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProfile() async {
@@ -101,21 +119,327 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return const Center(child: CircularProgressIndicator());
   }
 
+  Widget _buildPasswordChangeSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.lock_outline,
+              color: Colors.white,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Change Password',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Spacer(),
+            if (_changingPassword)
+              const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        
+        Form(
+          key: _passwordFormKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Current Password
+              TextFormField(
+                controller: _currentPasswordController,
+                obscureText: !_currentPasswordVisible,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Current Password',
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  enabledBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white54),
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.05),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _currentPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      color: Colors.white70,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _currentPasswordVisible = !_currentPasswordVisible;
+                      });
+                    },
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your current password';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // New Password
+              TextFormField(
+                controller: _newPasswordController,
+                obscureText: !_newPasswordVisible,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'New Password',
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  enabledBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white54),
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.05),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _newPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      color: Colors.white70,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _newPasswordVisible = !_newPasswordVisible;
+                      });
+                    },
+                  ),
+                ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a new password';
+                }
+                if (value.length < 8) {
+                  return 'Password must be at least 8 characters';
+                }
+                // Check for additional complexity requirements
+                if (!value.contains(RegExp(r'[A-Z]'))) {
+                  return 'Password must contain at least one uppercase letter';
+                }
+                if (!value.contains(RegExp(r'[0-9]'))) {
+                  return 'Password must contain at least one number';
+                }
+                return null;
+              },
+              ),
+              const SizedBox(height: 16),
+              
+              // Confirm Password
+              TextFormField(
+                controller: _confirmPasswordController,
+                obscureText: !_confirmPasswordVisible,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Confirm Password',
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  enabledBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white54),
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.05),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _confirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      color: Colors.white70,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _confirmPasswordVisible = !_confirmPasswordVisible;
+                      });
+                    },
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please confirm your new password';
+                  }
+                  if (value != _newPasswordController.text) {
+                    return 'Passwords do not match';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              
+              // Change Password Button
+              ElevatedButton(
+                onPressed: _changingPassword ? null : _changePassword,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurpleAccent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: const Text(
+                  "Change Password",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Future<void> _changePassword() async {
+    // Validate form
+    if (_passwordFormKey.currentState?.validate() != true) {
+      return;
+    }
+    
+    setState(() {
+      _changingPassword = true;
+    });
+    
+    try {
+      // Enhanced debug logging
+      debugPrint('🔒 Attempting password change:');
+      debugPrint('- Current password length: ${_currentPasswordController.text.length}');
+      debugPrint('- New password length: ${_newPasswordController.text.length}');
+      debugPrint('- New password has uppercase: ${_newPasswordController.text.contains(RegExp(r'[A-Z]'))}');
+      debugPrint('- New password has number: ${_newPasswordController.text.contains(RegExp(r'[0-9]'))}');
+      debugPrint('- New password has special char: ${_newPasswordController.text.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))}');
+      
+      final currentPwTrimmed = _currentPasswordController.text.trim();
+      final newPwTrimmed = _newPasswordController.text.trim();
+      
+      // More validation to ensure request will succeed
+      if (currentPwTrimmed.isEmpty) {
+        throw Exception('Current password cannot be empty');
+      }
+      
+      if (newPwTrimmed.length < 8) {
+        throw Exception('New password must be at least 8 characters long');
+      }
+      
+      // Make the API call
+      await ApiService.changePassword(
+        currentPassword: currentPwTrimmed,
+        newPassword: newPwTrimmed,
+      );
+      
+      // Clear password fields on success
+      _currentPasswordController.clear();
+      _newPasswordController.clear();
+      _confirmPasswordController.clear();
+      
+      if (!mounted) return;
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Password changed successfully'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      debugPrint('❌ Failed to change password: $e');
+      
+      if (!mounted) return;
+      
+      String errorMessage = 'Failed to change password';
+      
+      // More specific error messages
+      if (e.toString().contains('400')) {
+        errorMessage = 'Your current password may be incorrect or your new password doesn\'t meet the requirements (minimum 8 characters with at least one uppercase letter and one number)';
+      } else if (e.toString().contains('401') || e.toString().contains('403')) {
+        errorMessage = 'You need to be logged in to change your password';
+      } else if (e.toString().contains('timeout')) {
+        errorMessage = 'Connection timed out. Please try again';
+      } else if (e.toString().contains('empty') || e.toString().contains('at least 8 characters')) {
+        errorMessage = e.toString().contains('Exception:') 
+            ? e.toString().split('Exception:')[1].trim()
+            : e.toString();
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ $errorMessage'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 8),
+          action: SnackBarAction(
+            label: 'Dismiss',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _changingPassword = false;
+        });
+      }
+    }
+  }
+
   Widget _buildProfileContent() {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Email display
-          Text(
-            _email ?? 'unknown',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
+          // Back button and Email display
+          Row(
+            children: [
+              // Back button
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => widget.onDone?.call(),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _email ?? 'unknown',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              // Empty space to balance the back button
+              const SizedBox(width: 24),
+            ],
           ),
           const SizedBox(height: 20),
 
@@ -325,6 +649,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Password Change Section
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 20),
+            decoration: BoxDecoration(
+              color: AppColors.purple950,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: _buildPasswordChangeSection(),
           ),
         ],
       ),
