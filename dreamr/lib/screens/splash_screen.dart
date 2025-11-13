@@ -7,6 +7,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:dreamr/constants.dart';
 import 'package:provider/provider.dart';
 import 'package:dreamr/state/subscription_model.dart';
+import 'package:dreamr/services/notification_service.dart';
+
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -76,6 +78,9 @@ class _SplashScreenState extends State<SplashScreen> {
           
           // Initialize subscription state before navigating
           await _initializeSubscription();
+
+          // schedule notifications on successful login
+          await _rescheduleNotifications();
           
           if (!mounted) return;
           Navigator.pushReplacement(
@@ -100,6 +105,7 @@ class _SplashScreenState extends State<SplashScreen> {
       }
     }
   }
+
   // Initialize subscription state
   Future<void> _initializeSubscription() async {
     try {
@@ -111,6 +117,39 @@ class _SplashScreenState extends State<SplashScreen> {
     } catch (e) {
       debugPrint('❌ Failed to initialize subscription: $e');
       // Continue anyway - subscription will be initialized later
+    }
+  }
+
+  // Reschedule notifications on login
+  Future<void> _rescheduleNotifications() async {
+    try {
+      // Try to personalize with profile first name
+      final profile = await ApiService.getProfile(); // should return a Map
+      final String? first = (() {
+        final v = profile['first_name']?.toString().trim();
+        return (v != null && v.isNotEmpty) ? v : null;
+      })();
+
+      // If you have usage stats, plug them here. Otherwise safe fallbacks:
+      final int? streakDays = null;
+      final DateTime? lastLogUtc = DateTime.now().toUtc();
+
+      await NotificationService().rescheduleAllOnLogin(
+        displayName: first,
+        streakDays: streakDays,
+        lastLogUtc: lastLogUtc,
+        dailyTime: const TimeOfDay(hour: 8, minute: 0),
+        weeklyWeekday: DateTime.sunday,
+      );
+    } catch (e) {
+      // Fallback schedule if profile fetch fails
+      await NotificationService().rescheduleAllOnLogin(
+        displayName: null,
+        streakDays: null,
+        lastLogUtc: DateTime.now().toUtc(),
+        dailyTime: const TimeOfDay(hour: 8, minute: 0),
+        weeklyWeekday: DateTime.sunday,
+      );
     }
   }
   
